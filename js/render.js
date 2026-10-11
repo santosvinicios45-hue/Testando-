@@ -624,26 +624,26 @@
         case 'vizinho':
           R(c, x, y, r.w, r.h, '#8f8269'); for (let i = 0; i < r.w; i += 10) R(c, x + i, y, 1, r.h, '#857860');
           R(c, x + 4, floor - 10, 34, 10, '#6b5040'); R(c, x + 5, floor - 13, 32, 4, '#d8d0c0'); R(c, x + 50, y + 8, 14, 10, '#3d5a73');
-          H(c, x + 40, floor - 26, { facing: -1, state: 'idle', t, shirtless: true, pal: pal({ shirt: '#e2b48f', shirtS: '#c08f6b', pants: '#f4f4f4', pantsS: '#e0e0e0', shoe: '#e2b48f', hair: '#6b5a4a', belt: '#f4f4f4' }) });
+          H(c, x + 40, floor - G.PH, { facing: -1, state: 'idle', t, shirtless: true, pal: pal({ shirt: '#e2b48f', shirtS: '#c08f6b', pants: '#f4f4f4', pantsS: '#e0e0e0', shoe: '#e2b48f', hair: '#6b5a4a', belt: '#f4f4f4' }) });
           break;
         case 'apto11': // senhora vendo novela
           R(c, x, y, r.w, r.h, '#a7b88f'); R(c, x + 8, floor - 14, 26, 14, '#7b4b3a'); R(c, x + 10, floor - 18, 22, 6, '#8c5a48');
           R(c, x + 60, floor - 20, 18, 14, '#111'); R(c, x + 61, floor - 19, 16, 10, Math.sin(t * 3) > 0 ? '#c0587e' : '#d07090');
-          H(c, x + 16, floor - 26 - 6, { facing: 1, state: 'sit', t, pal: pal({ hair: '#cfcfcf', shirt: '#8e6fb3', shirtS: '#6f548f' }), hairStyle: 'bun' });
+          H(c, x + 16, floor - G.PH - 6, { facing: 1, state: 'sit', t, pal: pal({ hair: '#cfcfcf', shirt: '#8e6fb3', shirtS: '#6f548f' }), hairStyle: 'bun' });
           R(c, x + 30, floor - 10, 4, 10, '#7b4b3a');
           break;
         case 'apto12': // família jantando feijão
           R(c, x, y, r.w, r.h, '#e3c79a'); R(c, x + 18, floor - 13, 50, 2, '#8a5a2b'); R(c, x + 22, floor - 11, 2, 11, '#6a4220'); R(c, x + 62, floor - 11, 2, 11, '#6a4220');
           R(c, x + 32, floor - 16, 6, 3, '#4a2a14'); R(c, x + 46, floor - 16, 6, 3, '#f1f1f1');
-          H(c, x + 10, floor - 26, { facing: 1, state: 'idle', t, pal: pal({ shirt: '#2e86c1' }), gesture: Math.sin(t * 4) > 0.5 ? 2 : 0 });
-          H(c, x + 70, floor - 26, { facing: -1, state: 'idle', t: t + 2, pal: pal({ shirt: '#c0392b', hair: '#111', skin: '#8d5a3b', skinS: '#6e432a' }), hairStyle: 'long' });
+          H(c, x + 10, floor - G.PH, { facing: 1, state: 'idle', t, pal: pal({ shirt: '#2e86c1' }), gesture: Math.sin(t * 4) > 0.5 ? 2 : 0 });
+          H(c, x + 70, floor - G.PH, { facing: -1, state: 'idle', t: t + 2, pal: pal({ shirt: '#c0392b', hair: '#111', skin: '#8d5a3b', skinS: '#6e432a' }), hairStyle: 'long' });
           H(c, x + 40, floor - 22, { facing: 1, state: 'idle', t: t + 4, pal: pal({ shirt: '#27ae60' }) });
           break;
         case 'apto31': { // o vizinho de cima arrastando... alguma coisa coberta (o romance nunca diz o que é)
           R(c, x, y, r.w, r.h, '#6e6a80'); const k = (Math.sin(t * 0.8) + 1) / 2;
           const ox = x + 20 + k * 40;
           R(c, ox, floor - 14, 18, 14, '#d9d4c7'); R(c, ox + 2, floor - 15, 14, 2, '#cfc9ba'); R(c, ox - 1, floor - 2, 20, 2, '#bdb7a8');
-          H(c, ox + 20, floor - 26, { facing: -1, state: 'walk', t: t * 0.6, pal: pal({ shirt: '#7f8c8d', hair: '#2c2c2c' }) });
+          H(c, ox + 20, floor - G.PH, { facing: -1, state: 'walk', t: t * 0.6, pal: pal({ shirt: '#7f8c8d', hair: '#2c2c2c' }) });
           if (Math.sin(t * 9) > 0.7) R(c, ox - 4, floor - 1, 2, 1, '#fff');
           break;
         }
@@ -677,7 +677,7 @@
         case 'passeador':
           G.Sprites.human(c, x, y, { facing: n.facing, state: st, t: n.anim / 9, pal: base, seed: 1 });
           G.Sprites.dog(c, Math.round(n.dog.x - cam.x), Math.round(n.dog.y - cam.y), n.dog.dir, n.dog.anim);
-          c.strokeStyle = '#c0392b'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + (n.facing > 0 ? 8 : 2), y + 15); c.lineTo(Math.round(n.dog.x - cam.x) + (n.dog.dir > 0 ? 9 : 3), Math.round(n.dog.y - cam.y) + 1); c.stroke();
+          c.strokeStyle = '#c0392b'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + (n.facing > 0 ? 8 : 2), y + 20); c.lineTo(Math.round(n.dog.x - cam.x) + (n.dog.dir > 0 ? 9 : 3), Math.round(n.dog.y - cam.y) + 1); c.stroke();
           break;
         case 'moto':
           if (n.alpha <= 0) return;
@@ -685,7 +685,7 @@
           break;
         case 'senhora':
           G.Sprites.human(c, x, y - 2, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#e0b896', skinS: '#c39a78', hair: '#cfcfcf', shirt: '#7d5a8c', shirtS: '#5e4269', shoe: '#5a3d2b' }), hairStyle: 'bun', dress: '#6b4a7a', handOnBag: n.anim > 0 ? 1 : 0, seed: 3 });
-          R(c, x + 6, y + 13, 4, 5, '#8e4b2c');
+          R(c, x + 7, y + 17, 5, 6, '#8e4b2c'); R(c, x + 7, y + 17, 5, 1, '#a65e3a');
           break;
         case 'casal_a':
           G.Sprites.human(c, x, y, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { shirt: '#b03a48', shirtS: '#8a2c38', hair: '#5a3a22' }), hairStyle: 'long', gesture: n.sayT > 0 ? Math.round(Math.abs(n.anim) * 3) : 0, seed: 4 });
@@ -724,9 +724,9 @@
       if (p.powerAim) aim = { x: p.powerAim.x - cam.x, y: p.powerAim.y - cam.y };
       if (p.powerGlow > 0 || g.powers.held) {
         c.save(); c.globalAlpha = 0.18 * Math.max(p.powerGlow, g.powers.held ? 1 : 0);
-        c.fillStyle = P ? P.color : '#9fd8ff'; c.beginPath(); c.arc(x + 5, y + 12, 16, 0, Math.PI * 2); c.fill(); c.restore();
+        c.fillStyle = P ? P.color : '#9fd8ff'; c.beginPath(); c.arc(x + 5, y + 16, 19, 0, Math.PI * 2); c.fill(); c.restore();
       }
-      G.Sprites.human(c, x, y, { facing: p.facing, state: p.state, run: p.running, t: p.anim, landT: p.landT, aim, carrying: !!p.carry, glow: p.powerGlow, glowColor: P ? P.color : '#9fd8ff', flash: g.powers.unravelT > 0 ? g.powers.unravelT : 0 });
+      G.Sprites.human(c, x, y, { hoodie: true, hairStyle: 'spiky', shadow: true, facing: p.facing, state: p.state, run: p.running, t: p.anim, landT: p.landT, aim, carrying: !!p.carry, glow: p.powerGlow, glowColor: P ? P.color : '#9fd8ff', flash: g.powers.unravelT > 0 ? g.powers.unravelT : 0 });
       if (p.state === 'stun' || this.starsT > 0) {
         for (let i = 0; i < 3; i++) {
           const a = this.time * 6 + i * 2.1;

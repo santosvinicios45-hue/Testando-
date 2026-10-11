@@ -9,6 +9,7 @@
   'use strict';
 
   G.VERSION = '0.1.0-etapa1';
+  G.PH = 32;            // altura da caixa de colisão das pessoas (≈ 1,8 m)
   G.TILE = 16;          // 1 bloco = 16 px ≈ 1 metro
   G.VIEW_W = 480;       // resolução interna (pixel art)
   G.VIEW_H = 270;

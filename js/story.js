@@ -207,7 +207,7 @@
     enter(st, g) {
       const cup = g.resetProp('copo');
       g.player.locked = true;
-      g.player.x = TS * 51 + 2; g.player.y = floorApt - 26; g.player.vx = 0; g.player.facing = -1;
+      g.player.x = TS * 51 + 2; g.player.y = floorApt - G.PH; g.player.vx = 0; g.player.facing = -1;
       g.player.powerAim = { x: cup.cx - 6, y: cup.cy + 4 };
       cup.noFriction = true; cup.noBreak = true; cup.vx = -30; cup.vy = 0;
       st.local = { phase: 'slide', t: 0 };
@@ -530,7 +530,7 @@
       }
       if (id === 'sofa' && g.inventory.has('bolsa_gelo')) {
         const sofa = g.decorByType('sofa');
-        g.player.setPose('lie', sofa.x + 6, floorApt - 8 - 26, 1);
+        g.player.setPose('lie', sofa.x + 6, floorApt - 8 - G.PH, 1);
         st.say([
           N('Passou dez minutos deitado no sofá com uma bolsa de gelo dizendo em voz alta, pro apartamento vazio, que aquilo era humilhante.'),
           V('— Isso é humilhante.'),
@@ -565,7 +565,7 @@
       if (id !== 'sofa') return false;
       const go = () => {
         const sofa = g.decorByType('sofa');
-        g.player.setPose('sit', sofa.x + 6, floorApt - 8 - 26, 1);
+        g.player.setPose('sit', sofa.x + 6, floorApt - 8 - G.PH, 1);
         st.say([
           N('Ao meio-dia ele decidiu fazer um teste sério.'),
           N('Se ele conseguia desfazer o copo quebrado, ele conseguia desfazer eventos. Não coisas — eventos. Então a pergunta natural era: até onde?'),
@@ -585,7 +585,7 @@
     chapter: 2, safe: true, objective: 'Segure tudo: arraste cada memória de volta até V. (Segure C para segurar com mais força.)',
     enter(st, g) {
       const sofa = g.decorByType('sofa');
-      g.player.setPose('sit', sofa.x + 6, floorApt - 8 - 26, 1);
+      g.player.setPose('sit', sofa.x + 6, floorApt - 8 - G.PH, 1);
       g.player.locked = true;
       g.powers.setEmotion('panico');
       st.say([N('Sentou no sofá. Olhou pro joelho. E pensou: isso nunca aconteceu.'), N('O que aconteceu em seguida durou, na melhor estimativa que ele conseguiu fazer depois, cerca de um segundo e meio.')], () => {
@@ -600,7 +600,7 @@
     chapter: 2, safe: true, objective: '...',
     enter(st, g) {
       g.sequence = null; g.renderer.desat = 0;
-      g.player.setPose('collapse', TS * 55, floorApt - 26, 1);
+      g.player.setPose('collapse', TS * 55, floorApt - G.PH, 1);
       g.player.locked = true;
       g.powers.setEmotion('exausto');
       st.say([
@@ -624,7 +624,7 @@
     intercept(st, g, id) {
       if (id !== 'cama') return false;
       const cama = g.decorByType('cama');
-      g.player.setPose('sit', cama.x + 14, floorApt - 10 - 26, 1);
+      g.player.setPose('sit', cama.x + 14, floorApt - 10 - G.PH, 1);
       const reacoes = {
         parar: [P('Seria a opção mais segura que já esteve disponível pra qualquer ser humano na história.', true)],
         regras: [P('Se for continuar, que seja com regras. Com limites. Com um caderno de verdade.', true)],
@@ -819,7 +819,7 @@
       const vas = g.resetProp('vassoura');
       if (vas) { vas.flash = 0.6; g.particles.ring(vas.cx, vas.cy, '#ffd27a', 10); }
       p.locked = false;
-      p.setPose('sitFloor', p.x, TS * 30 - 26, p.facing);
+      p.setPose('sitFloor', p.x, TS * 30 - G.PH, p.facing);
       this.say([
         N('E não tinha acontecido.'),
         N('O copo estava na pia. Inteiro. Com a marca da etiqueta velha ainda meio descascada de um lado. O chão estava seco.'),

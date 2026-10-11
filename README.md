@@ -125,8 +125,9 @@ segredo do telhado (que pode terminar devolvendo a chave ao porteiro, Seu Valdir
 - Objetos com física: empilhar, empurrar, arremessar, quebrar (copo, garrafa) e restaurar
   por rebobinamento do histórico de posições.
 - Os seis poderes, com a Linha, emoções e consequências.
-- Personagens desenhados em quadros (estilo Stardew/Terraria): cabeça grande, sombreamento,
-  contorno automático, andar em 6 quadros, corrida, respiração, piscar, pulo, queda, voo, sentar,
+- Personagens em pixel art com proporções realistas (vista 3/4): V de moletom azul com capuz,
+  cordões e bolso canguru, jeans e tênis branco, cabelo preto espetado e mãos no bolso quando
+  parado; sombreamento, contorno automático, sombra no chão, andar em 6 quadros, corrida, respiração, piscar, pulo, queda, voo, sentar,
   varrer, carregar, tontura e deitado; moto, cachorro e carros redesenhados.
 - Pessoas que se assustam correm alguns passos, se encolhem olhando para V e depois voltam ao
   lugar; a mesma coisa repetida (voar perto de novo) não reinicia o susto a cada instante.

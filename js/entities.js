@@ -366,15 +366,15 @@
   class NPC {
     constructor(spec) {
       Object.assign(this, spec);
-      this.w = 10; this.h = 26; this.t = Math.random() * 10; this.facing = -1;
+      this.w = 10; this.h = G.PH; this.t = Math.random() * 10; this.facing = -1;
       this.anim = 0; this.moving = false; this.say = null; this.sayT = 0;
       this.homeX = this.x; this.phase = 0; this.timer = U.rand(1, 4); this.visibleNow = true;
       this.scared = 0; this.stare = 0; this.hitT = 0; this.alert = 0; this.memory = {};
       this.cool = {}; this.cower = 0; this.returning = false;
-      if (this.kind === 'moto') { this.w = 24; this.h = 20; this.y += 6; }
-      if (this.kind === 'senhora') { this.h = 24; }
-      if (this.kind === 'crianca') { this.h = 18; }
-      this.dog = this.kind === 'passeador' ? { x: this.x - 16, y: this.y + 18, anim: 0, dir: -1 } : null;
+      if (this.kind === 'moto') { this.w = 24; this.h = 20; this.y += G.PH - 20; }
+      if (this.kind === 'senhora') { this.h = G.PH - 2; }
+      if (this.kind === 'crianca') { this.h = 22; }
+      this.dog = this.kind === 'passeador' ? { x: this.x - 16, y: this.y + G.PH - 8, anim: 0, dir: -1 } : null;
     }
     get cx() { return this.x + this.w / 2; }
     isDaytime(game) { const m = game.clock.min % 1440; return m >= 6 * 60 && m < 20 * 60; }
@@ -494,7 +494,7 @@
     update(dt, game) {
       this.t += dt;
       const p = game.player;
-      const near = Math.abs(p.x + 5 - this.x) < 26 && Math.abs(p.y + 26 - this.y) < 30;
+      const near = Math.abs(p.x + 5 - this.x) < 26 && Math.abs(p.y + p.h - this.y) < 30;
       if (this.fly > 0) {
         this.fly -= dt; this.x += this.vx * dt; this.y += this.vy * dt; this.vy += 20 * dt;
         if (this.fly <= 0) { this.x = this.homeX + U.rand(-20, 20); this.y = this.homeY; this.landing = 0.5; }

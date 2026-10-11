@@ -10,9 +10,10 @@
   const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
   G.R = R;
 
+  // V: moletom azul com capuz, jeans e tênis branco
   const PAL_V = {
-    skin: '#d9a066', skinS: '#b5814f', hair: '#2a1b14', shirt: '#3f6ea8', shirtS: '#2c5283',
-    pants: '#2e3854', pantsS: '#202840', shoe: '#e6e1d6', eye: '#1a1010', belt: '#5a4630',
+    skin: '#d9a271', skinS: '#b5814f', hair: '#16141c', shirt: '#2c40a8', shirtS: '#1f2d75',
+    pants: '#3f5f8c', pantsS: '#2c4466', shoe: '#eef0f2', eye: '#1a1418', belt: '#2c4466',
   };
   G.PAL_V = PAL_V;
 
@@ -20,7 +21,7 @@
    * Humanos (V e pessoas da rua). Caixa 10×26, (x,y) = canto superior.
    * ------------------------------------------------------------------ */
   function human(c, x, y, o) {
-    if (G.Characters && typeof document !== 'undefined') return G.Characters.draw(c, x + 5, y + 26, o);
+    if (G.Characters && typeof document !== 'undefined') return G.Characters.draw(c, x + 5, y + G.PH, o);
     return humanOld(c, x, y, o);
   }
   function humanOld(c, x, y, o) {

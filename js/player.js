@@ -17,7 +17,7 @@
 
   class Player {
     constructor(x, y) {
-      this.x = x; this.y = y; this.w = 10; this.h = 26;
+      this.x = x; this.y = y; this.w = 10; this.h = G.PH;
       this.vx = 0; this.vy = 0; this.facing = 1;
       this.onGround = false; this.coyote = 0; this.jumpBuf = 0; this.dropT = 0; this.jumpCut = false;
       this.anim = 0; this.state = 'idle';
@@ -241,10 +241,10 @@
       p.carried = true; p.vx = 0; p.vy = 0;
       if (this.sweepT > 0) {
         p.angle = this.facing * (0.5 + Math.sin(this.anim * 14) * 0.35);
-        p.x = this.cx + this.facing * 8 - p.w / 2; p.y = this.y + 6;
+        p.x = this.cx + this.facing * 8 - p.w / 2; p.y = this.y + 12;
       } else {
         p.angle = this.facing * 0.15;
-        p.x = this.cx + this.facing * 5 - p.w / 2; p.y = this.y + 4;
+        p.x = this.cx + this.facing * 6 - p.w / 2; p.y = this.y + 9;
       }
     }
     dropCarry() { if (this.carry) { this.carry.carried = false; this.carry.angle = 0; this.carry = null; } }

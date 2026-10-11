@@ -365,14 +365,14 @@
 
     // ---------- pessoas da rua (cenas vistas da janela no cap. 1) ----------
     const npcs = [
-      { id: 'passeador', kind: 'passeador', x: t(70), y: ground - 26 },
-      { id: 'moto', kind: 'moto', x: t(78), y: ground - 26 },
-      { id: 'senhora', kind: 'senhora', x: t(100), y: ground - 24 },
-      { id: 'casal_a', kind: 'casal_a', x: t(94) + 6, y: ground - 26 },
-      { id: 'casal_b', kind: 'casal_b', x: t(95) + 8, y: ground - 25 },
-      { id: 'crianca', kind: 'crianca', x: t(86) + 12, y: ground - 18 },
-      { id: 'porteiro', kind: 'porteiro', x: t(53) + 6, y: ground - 26, behind: true },
-      { id: 'atendente', kind: 'atendente', x: t(110) + 4, y: ground - 26, behind: true },
+      { id: 'passeador', kind: 'passeador', x: t(70), y: ground - G.PH },
+      { id: 'moto', kind: 'moto', x: t(78), y: ground - G.PH },
+      { id: 'senhora', kind: 'senhora', x: t(100), y: ground - G.PH + 2 },
+      { id: 'casal_a', kind: 'casal_a', x: t(94) + 6, y: ground - G.PH },
+      { id: 'casal_b', kind: 'casal_b', x: t(95) + 8, y: ground - G.PH },
+      { id: 'crianca', kind: 'crianca', x: t(86) + 12, y: ground - 22 },
+      { id: 'porteiro', kind: 'porteiro', x: t(53) + 6, y: ground - G.PH, behind: true },
+      { id: 'atendente', kind: 'atendente', x: t(110) + 4, y: ground - G.PH, behind: true },
     ];
 
     // ---------- regiões especiais (px) ----------
@@ -396,9 +396,9 @@
 
     return {
       world: w, props, pickups, decor, lights, npcs, regions, pigeons, stairs,
-      spawn: { x: t(52) - 2, y: floorApt - 26 },
-      bathroomSpawn: { x: t(4) + 2, y: t(46) - 26 },
-      hallSpawn: { x: t(40) + 4, y: floorApt - 26 },
+      spawn: { x: t(52) - 2, y: floorApt - G.PH },
+      bathroomSpawn: { x: t(4) + 2, y: t(46) - G.PH },
+      hallSpawn: { x: t(40) + 4, y: floorApt - G.PH },
       ground,
     };
   };

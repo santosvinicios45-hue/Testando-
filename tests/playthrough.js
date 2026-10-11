@@ -53,7 +53,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await shot('p01-cozinha');
 
   console.log('Capítulo 1 — o copo');
-  await place(16 * 51, 16 * 30 - 26);
+  await place(16 * 51, 16 * 30 - 32);
   await pressE();
   ok(await step() === 's1_queda', 'lavar o copo inicia a queda');
   ok(await waitFor(() => VG.game.propById('copo').frozen, 6000), 'o copo para a 15 cm do chão');
@@ -63,11 +63,11 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await waitFor(() => VG.game.propById('copo').broken, 3000), 'cutucar quebra o copo');
   await drain();
   ok(await step() === 's1_vassoura', 'passa para a vassoura');
-  await place(16 * 41 + 2, 16 * 30 - 26);
+  await place(16 * 41 + 2, 16 * 30 - 32);
   await pressE();
   ok(await ev(() => VG.game.player.carry && VG.game.player.carry.id === 'vassoura'), 'V pega a vassoura e carrega');
   const shard = await ev(() => VG.game.propById('copo').cx);
-  await place(shard - 8, 16 * 30 - 26);
+  await place(shard - 8, 16 * 30 - 32);
   ok(await waitFor(() => VG.game.player.sweepT > 0, 2000), 'V começa a varrer os cacos');
   await shot('p02b-varrendo');
   await waitFor(() => VG.game.story.dialog.active, 4000);
@@ -79,7 +79,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await ev(() => VG.game.powers.isUnlocked('restaurar') && VG.game.powers.isUnlocked('levitar')), 'Restaurar e Levitar desbloqueados');
 
   // Levitar com o mouse: segurar sobre o copo, subir, descer na pia
-  await place(16 * 50, 16 * 30 - 26);
+  await place(16 * 50, 16 * 30 - 32);
   await selectPower(1);
   const cup = await propCenter('copo');
   let c = await toClient(cup.x, cup.y);
@@ -95,15 +95,15 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await waitFor(() => VG.game.story.flags.desce === true, 4000), 'Desce: copo pousado na pia');
   await drain();
   ok(await step() === 's1_geladeira', 'passa para a geladeira');
-  await place(16 * 49, 16 * 30 - 26);
+  await place(16 * 49, 16 * 30 - 32);
   await pressE(); await drain();
   ok(await step() === 's1_chefe', 'geladeira → avisar o chefe');
-  await place(16 * 55, 16 * 30 - 26);
+  await place(16 * 55, 16 * 30 - 32);
   { const c = await toClient(16 * 55 + 5, 16 * 30 - 14); await page.mouse.move(c.x, c.y); await wait(60); }
   ok(await ev(() => { const c = VG.game.findInteraction(); return c && c.id; }) === 'celular', 'celular em foco');
   await pressE(); await drain();
   ok(await step() === 's1_caderno', 'celular → caderno');
-  await place(16 * 55 + 7, 16 * 30 - 26);
+  await place(16 * 55 + 7, 16 * 30 - 32);
   await pressE(); await drain();
   await wait(200);
   ok(await ev(() => VG.game.ui.modal === 'caderno'), 'caderno abre');
@@ -113,14 +113,14 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await step() === 's1_testes', 'testes do dia 1');
 
   // Transformar: colher (entortar e desentortar)
-  await place(16 * 52, 16 * 30 - 26);
+  await place(16 * 52, 16 * 30 - 32);
   await selectPower(4);
   let col = await propCenter('colher');
   await clickWorld(col.x, col.y); await drain();
   await clickWorld(col.x, col.y); await drain();
   ok(await ev(() => VG.game.story.flags.t_entortar && VG.game.story.flags.t_desentortar), 'colher entortou e desentortou');
   // Deslocar: controle remoto para o outro lado da sala (cozinha)
-  await place(16 * 54, 16 * 30 - 26);
+  await place(16 * 54, 16 * 30 - 32);
   await selectPower(3);
   const ctl = await propCenter('controle');
   await clickWorld(ctl.x, ctl.y);
@@ -128,7 +128,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await drain();
   ok(await ev(() => VG.game.story.flags.t_controle), 'controle remoto atravessou a sala sem percorrer o caminho');
   // Abajur: acender com E, mudar cor; apagar, mudar cor
-  await place(16 * 58 + 6, 16 * 30 - 26);
+  await place(16 * 58 + 6, 16 * 30 - 32);
   await ev(() => { VG.game.flags.abajurOn = false; });
   const ab = await ev(() => { const it = VG.game.interactables.find((i) => i.id === 'abajur'); return { x: it.x + it.w / 2, y: it.y + it.h / 2 }; });
   await ev(() => { const it = VG.game.interactables.find((i) => i.id === 'abajur'); it.action(VG.game); });
@@ -143,7 +143,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await ev(() => VG.game.props.some((p) => p.type === 'laranja')), 'laranja criada');
   await wait(500);
   const lar = await ev(() => { const p = VG.game.props.find((q) => q.type === 'laranja'); return { x: p.x, y: p.y }; });
-  await place(lar.x - 2, 16 * 30 - 26);
+  await place(lar.x - 2, 16 * 30 - 32);
   await pressE();
   ok(await ev(() => VG.game.inventory.has('laranja_perfeita')), 'laranja foi para os bolsos');
   await page.keyboard.press('KeyI'); await wait(150);
@@ -156,19 +156,19 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await drain();
   ok(await waitFor(() => VG.game.story.stepId === 's1_janela', 4000), 'testes concluídos → janela');
   await waitFor(() => !VG.game.fading, 4000);
-  await place(16 * 60 - 4, 16 * 30 - 26);
+  await place(16 * 60 - 4, 16 * 30 - 32);
   await ev(() => { VG.game.player.facing = 1; });
   const gd = await toClient(16 * 60 + 8, 16 * 29); await page.mouse.move(gd.x, gd.y); await wait(50);
   await pressE(); await drain();
   ok(await step() === 's1_dormir', 'janela → dormir');
-  await place(16 * 45, 16 * 30 - 26);
+  await place(16 * 45, 16 * 30 - 32);
   await pressE();
   ok(await waitFor(() => VG.game.story.stepId === 's2_percepcao', 5000), 'dormir → dia 2');
   await drain();
 
   console.log('Capítulo 2 — testes domésticos');
   ok(await ev(() => VG.game.clock.day === 2), 'é o dia 2');
-  await place(16 * 53, 16 * 30 - 26);
+  await place(16 * 53, 16 * 30 - 32);
   await selectPower(6);
   const wallC = await toClient(16 * 56, 16 * 28);
   await page.mouse.move(wallC.x, wallC.y); await page.mouse.down(); await wait(500);
@@ -178,29 +178,29 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await waitFor(() => VG.game.story.stepId === 's2_sabor', 4000), 'parede transparente → NUNCA MAIS → sabor');
   ok(await ev(() => VG.game.powers.blockedRegions.has('paredeVizinho')), 'Percepção na parede do vizinho fica bloqueada por V');
   await waitFor(() => !VG.game.fading, 4000);
-  await place(16 * 51, 16 * 30 - 26);
+  await place(16 * 51, 16 * 30 - 32);
   await selectPower(4);
   const cup2 = await propCenter('copo');
   await clickWorld(cup2.x, cup2.y); await drain();
   await pressE(); await drain();
   ok(await waitFor(() => VG.game.story.stepId === 's2_voo', 3000), 'água com gosto de coca bebida → voo');
   await waitFor(() => !VG.game.fading, 4000);
-  await place(16 * 55, 16 * 30 - 26);
+  await place(16 * 55, 16 * 30 - 32);
   await page.keyboard.down('KeyW'); await wait(1300); await page.keyboard.up('KeyW');
   await drain();
   ok(await ev(() => VG.game.story.flags.bonk), 'tentou voar e bateu a cabeça no teto');
   await wait(1500);
-  await place(16 * 49, 16 * 30 - 26);
+  await place(16 * 49, 16 * 30 - 32);
   await pressE();
   ok(await ev(() => VG.game.inventory.has('bolsa_gelo')), 'pegou a bolsa de gelo');
-  await place(16 * 57 + 4, 16 * 30 - 26);
+  await place(16 * 57 + 4, 16 * 30 - 32);
   await pressE(); await drain();
   ok(await waitFor(() => VG.game.story.stepId === 's2_dormir', 3000), 'deitou no sofá → dormir');
-  await place(16 * 45, 16 * 30 - 26);
+  await place(16 * 45, 16 * 30 - 32);
   await pressE();
   ok(await waitFor(() => VG.game.story.stepId === 's3_irritado', 5000), 'dia 3');
   await drain();
-  await place(16 * 57 + 4, 16 * 30 - 26);
+  await place(16 * 57 + 4, 16 * 30 - 32);
   await pressE();
   await waitFor(() => !VG.game.fading, 5000);
   await drain(0);
@@ -223,13 +223,13 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await drain();
   ok(await waitFor(() => VG.game.story.stepId === 's3_noite', 6000), 'aquela noite');
   await waitFor(() => !VG.game.fading, 5000);
-  await place(16 * 45, 16 * 30 - 26);
+  await place(16 * 45, 16 * 30 - 32);
   await pressE();
   await drain(1);
   ok(await waitFor(() => VG.game.story.stepId === 's4_manha', 7000), 'dormiu → manhã do dia 4');
   ok(await ev(() => VG.game.story.flags.postura === 'regras'), 'escolha da noite registrada (regras)');
   await waitFor(() => !VG.game.fading, 5000);
-  await place(16 * 51, 16 * 30 - 26);
+  await place(16 * 51, 16 * 30 - 32);
   await pressE(); await drain();
   ok(await waitFor(() => VG.game.story.stepId === 's_livre', 3000), 'fim do capítulo 2 → exploração livre');
   ok(await ev(() => VG.game.ui.modal === 'endcard'), 'tela de fim da etapa');
@@ -239,27 +239,27 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
 
   console.log('Exploração, missões secundárias e salvamento');
   // sair pela porta do apartamento até a rua
-  await place(16 * 39, 16 * 30 - 26);
+  await place(16 * 39, 16 * 30 - 32);
   await ev(() => { VG.game.interactables.find((i) => i.id === 'porta_apto').action(VG.game); });
   ok(await ev(() => !VG.G_TILES_SOLID && !VG.TILES[VG.game.world.get(38, 28)].solid), 'porta do apartamento abre');
-  await place(16 * 66, 16 * 38 - 26);
+  await place(16 * 66, 16 * 38 - 32);
   await wait(300);
   ok(await ev(() => !!VG.game.story.side.tercas), 'missão "terças-feiras" ativada ao sair');
-  await place(16 * 92, 16 * 38 - 26);
+  await place(16 * 92, 16 * 38 - 32);
   await wait(200);
   ok(await ev(() => !!VG.game.story.side.consertos), 'missão "consertos" ativada na praça');
   await selectPower(2);
   const banco = await propCenter('banco');
   await clickWorld(banco.x, banco.y);
   await wait(1300);
-  await place(16 * 96, 16 * 38 - 26);
+  await place(16 * 96, 16 * 38 - 32);
   const poste = await propCenter('poste');
   await clickWorld(poste.x, poste.y + 20);
   await wait(1300);
   ok(await ev(() => VG.game.story.side.consertos.state === 'done'), 'banco e poste restaurados');
   await shot('p09-praca');
   // segredo do telhado
-  await place(16 * 43, 16 * 38 - 26);
+  await place(16 * 43, 16 * 38 - 32);
   await selectPower(6);
   const pn = await propCenter('painel');
   let pc = await toClient(pn.x, pn.y);
@@ -270,20 +270,20 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await page.mouse.move(pc.x, pc.y); await page.mouse.down();
   for (let i = 1; i <= 6; i++) { const t = await toClient(pn.x - i * 6, pn.y); await page.mouse.move(t.x, t.y); await wait(50); }
   await page.mouse.up(); await wait(400);
-  await place(16 * 44 + 2, 16 * 38 - 26);
+  await place(16 * 44 + 2, 16 * 38 - 32);
   await pressE();
   ok(await ev(() => VG.game.inventory.has('chave_terraco')), 'pegou a chave do terraço');
   // sobe a escada de degraus do 3º andar até o alçapão (andando, como no Terraria)
-  await place(16 * 36, 16 * 26 - 26);
+  await place(16 * 36, 16 * 26 - 32);
   await page.keyboard.down('KeyA'); await wait(1500); await page.keyboard.up('KeyA');
-  ok(await ev(() => { const p = VG.game.player; return p.y + 26 > 16 * 24 + 1 && p.y + 26 < 16 * 26 - 4 && p.onGround; }), 'subiu os degraus e parou embaixo do alçapão trancado');
+  ok(await ev(() => { const p = VG.game.player; return p.y + 32 > 16 * 24 + 1 && p.y + 32 < 16 * 26 - 4 && p.onGround; }), 'subiu os degraus e parou embaixo do alçapão trancado');
   await shot('p09b-escada');
   await pressE();
   ok(await ev(() => !VG.TILES[VG.game.world.get(32, 22)].solid), 'alçapão abre com a chave');
   await page.keyboard.down('KeyA'); await wait(700); await page.keyboard.up('KeyA');
   await page.keyboard.down('KeyD'); await wait(1400); await page.keyboard.up('KeyD');
-  ok(await ev(() => VG.game.player.y + 26 <= 16 * 22 + 1), 'chegou ao telhado pela escada');
-  await place(16 * 40 - 2, 16 * 22 - 26);
+  ok(await ev(() => VG.game.player.y + 32 <= 16 * 22 + 1), 'chegou ao telhado pela escada');
+  await place(16 * 40 - 2, 16 * 22 - 32);
   await pressE();
   ok(await ev(() => VG.game.story.side.terraco && VG.game.story.side.terraco.state === 'done'), 'segredo do telhado concluído');
   await shot('p10-telhado');
@@ -291,21 +291,21 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   console.log('Novidades: padaria, porteiro, pipa, Criar, voo e teleporte');
   // padaria: comprar pão com a carteira
   await ev(() => { VG.game.clock.min = 10 * 60; VG.game.interactables.find((i) => i.id === 'porta_padaria').action(VG.game); });
-  await place(16 * 109, 16 * 38 - 26);
+  await place(16 * 109, 16 * 38 - 32);
   const money0 = await ev(() => VG.game.wallet.reais);
   await pressE();
   await waitFor(() => VG.game.story.dialog.active, 2000);
   await drain(0);
   ok(await ev((m) => VG.game.inventory.has('pao_frances') && Math.abs(VG.game.wallet.reais - (m - 1)) < 1e-6, money0), 'comprou um pão francês por R$ 1,00');
   // porteiro
-  await place(16 * 53 + 2, 16 * 38 - 26);
+  await place(16 * 53 + 2, 16 * 38 - 32);
   await ev(() => { VG.game.player.facing = 1; });
   await pressE();
   ok(await ev(() => VG.game.story.dialog.active && /Valdir/.test(VG.game.story.dialog.current.who)), 'conversa com o porteiro');
   await drain(0);
   ok(await ev(() => VG.game.story.flags.chaveDevolvida && VG.game.wallet.reais > 20), 'devolveu a chave ao porteiro e ganhou gorjeta');
   // pipa: levitar até o menino
-  await place(16 * 86, 16 * 38 - 26);
+  await place(16 * 86, 16 * 38 - 32);
   await selectPower(1);
   const pipa = await propCenter('pipa');
   const kid = await ev(() => { const n = VG.game.npcs.find((q) => q.kind === 'crianca'); return { x: n.cx, y: n.y + 6 }; });
@@ -324,13 +324,13 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await page.mouse.click(cm.x, cm.y); await wait(100);
   ok(await ev(() => VG.game.props.some((p) => p.dynamic && p.type !== 'laranja')), 'criou outra comida');
   // voo livre fora do prédio
-  await place(16 * 75, 16 * 38 - 26);
+  await place(16 * 75, 16 * 38 - 32);
   await page.keyboard.press('KeyW'); await wait(180);
   await page.keyboard.down('KeyW'); await wait(1000);
   ok(await ev(() => VG.game.player.hover), 'entrou no voo controlado (Pular de novo no ar)');
   const flyY = await ev(() => VG.game.player.y);
   await page.keyboard.up('KeyW');
-  ok(flyY < 16 * 38 - 26 - 70, 'voa lá fora (subiu ' + Math.round(16 * 38 - 26 - flyY) + ' px)');
+  ok(flyY < 16 * 38 - 32 - 70, 'voa lá fora (subiu ' + Math.round(16 * 38 - 32 - flyY) + ' px)');
   await wait(1500);
   // teleporte
   await selectPower(7);
@@ -348,7 +348,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await page.click('#panel-saves button[data-act="back"]'); await wait(80);
   await page.click('#menu-pause button[data-act="resume"]'); await wait(80);
   const before = await ev(() => ({ x: VG.game.player.x, step: VG.game.story.stepId, inv: VG.game.inventory.count('chave_terraco'), comp: VG.game.powers.compreensao, banco: VG.game.propById('banco').broken, alc: VG.game.world.get(33, 22), regs: VG.game.story.registros.length }));
-  await place(16 * 10, 16 * 38 - 26);
+  await place(16 * 10, 16 * 38 - 32);
   await page.keyboard.press('Escape'); await wait(100);
   await page.click('#menu-pause button[data-act="load"]'); await wait(100);
   await page.click('button[data-act="slot-load"][data-slot="1"]'); await wait(400);

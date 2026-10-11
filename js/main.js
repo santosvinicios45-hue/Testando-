@@ -75,7 +75,7 @@
       this.bus = new G.Events();
       this.setupWorld();
       this.backdrop = true;
-      this.player = new G.Player(TS * 70, TS * 38 - 26);
+      this.player = new G.Player(TS * 70, TS * 38 - G.PH);
       this.powers = null; this.story = null; this.inventory = null;
       this.clock = { day: 1, min: 18 * 60 + 20 };
       this.flags = { luz_sala: true, abajurOn: true };
@@ -194,7 +194,7 @@
         p.clearPose(); p.dropCarry();
         // acorda deitado na cama e levanta (sem aparecer em outro lugar)
         const cama = this.decorByType('cama');
-        p.setPose('sleep', cama.x + 15, cama.y - 26, 1);
+        p.setPose('sleep', cama.x + 15, cama.y - G.PH, 1);
         this.flags.abajurGlow = false;
         if (this.powers) this.powers.tension = 0;
         this.renderer.snapCamera();

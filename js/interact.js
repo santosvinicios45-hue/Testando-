@@ -77,7 +77,7 @@
       action: (g2) => {
         const s = decor('sofa');
         const right = g2.player.cx > s.x + s.w / 2;
-        g2.player.setPose('sit', s.x + (right ? 17 : 5), TS * 30 - 8 - 26, right ? -1 : 1);
+        g2.player.setPose('sit', s.x + (right ? 17 : 5), TS * 30 - 8 - G.PH, right ? -1 : 1);
         if (right) { g2.audio.play('creak'); text(g2, 'Range do lado direito. Sempre rangeu.'); }
       },
     });
@@ -137,7 +137,7 @@
     add({ id: 'bueiro', x: TS * 20 - 4, y: TS * 38 - 20, w: TS + 8, h: 22, label: 'Bueiro', action: (g2) => text(g2, 'Uma grade enferrujada. Lá embaixo, algo ressoa como um eco grave. (O subterrâneo abre na Etapa 2.)', true) });
     add({ id: 'outdoor', ...rectOf(decor('outdoor')), label: 'Outdoor', action: (g2) => text(g2, '"ALUGA-SE". Há anos.', true) });
     add({ id: 'barreira', x: TS * 143, y: TS * 30, w: TS * 4, h: TS * 8, label: 'Barreira de obras', action: (g2) => text(g2, 'Rua interditada para obras. (O mundo se expande na Etapa 2.)', true) });
-    add({ id: 'banco_ok', ...rectOf(decor('banco_ok')), label: 'Sentar no banco', action: (g2) => { const d = decor('banco_ok'); g2.player.setPose('sit', d.x + 10, TS * 38 - 7 - 26, 1); } });
+    add({ id: 'banco_ok', ...rectOf(decor('banco_ok')), label: 'Sentar no banco', action: (g2) => { const d = decor('banco_ok'); g2.player.setPose('sit', d.x + 10, TS * 38 - 7 - G.PH, 1); } });
     add({ id: 'placa_praca', ...rectOf(decor('placa')), label: 'Placa', action: (g2) => text(g2, 'Praça. Alguém riscou o nome com chave.', true) });
     add({ id: 'ponto', ...rectOf(decor('ponto')), label: 'Ponto de ônibus', action: (g2) => text(g2, 'Um banco de metal e um painel de propaganda de faculdade.', true) });
 

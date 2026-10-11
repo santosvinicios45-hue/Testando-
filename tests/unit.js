@@ -98,7 +98,7 @@ test('Depois de encostar na parede, V consegue se afastar (não fica preso)', ()
 });
 test('Pulo na rua sobe ~3,5 blocos e volta ao chão', () => {
   const g = fakeGame();
-  g.player.x = TS * 70; g.player.y = TS * 38 - 26; run(g, 0.3);
+  g.player.x = TS * 70; g.player.y = TS * 38 - G.PH; run(g, 0.3);
   const y0 = g.player.y; let minY = y0;
   g.input.keys.hit_jump = true; g.input.keys.jump = true;
   run(g, 1.2, (i) => { if (i === 1) g.input.keys.hit_jump = false; minY = Math.min(minY, g.player.y); });
@@ -108,7 +108,7 @@ test('Pulo na rua sobe ~3,5 blocos e volta ao chão', () => {
 });
 test('Soltar o botão cedo dá um pulo mais baixo (pulo variável)', () => {
   const g = fakeGame();
-  g.player.x = TS * 70; g.player.y = TS * 38 - 26; run(g, 0.3);
+  g.player.x = TS * 70; g.player.y = TS * 38 - G.PH; run(g, 0.3);
   const y0 = g.player.y; let minY = y0;
   g.input.keys.hit_jump = true; g.input.keys.jump = true;
   run(g, 1, (i) => { if (i === 1) g.input.keys.hit_jump = false; if (i === 6) g.input.keys.jump = false; minY = Math.min(minY, g.player.y); });
@@ -131,7 +131,7 @@ test('Queda muito rápida não atravessa o chão (sub‑passos)', () => {
 });
 test('Escada (degraus): andar para a esquerda no térreo sobe até o telhado-andar sem atravessar lajes', () => {
   const g = fakeGame();
-  g.player.x = TS * 37; g.player.y = TS * 38 - 26; run(g, 0.3);
+  g.player.x = TS * 37; g.player.y = TS * 38 - G.PH; run(g, 0.3);
   let worst = 0, stuck = 0;
   // sobe os três andares: esquerda no 1º lance, direita no 2º — o caminho segue o degrau
   for (let floor = 0; floor < 3; floor++) {
@@ -150,7 +150,7 @@ test('Escada (degraus): andar para a esquerda no térreo sobe até o telhado-and
 });
 test('Escada: segurar S no corredor desce; o patamar continua descendo', () => {
   const g = fakeGame();
-  g.player.x = TS * 36; g.player.y = TS * 30 - 26; run(g, 0.3);
+  g.player.x = TS * 36; g.player.y = TS * 30 - G.PH; run(g, 0.3);
   g.input.keys.down = true; g.input.keys.left = true; run(g, 0.6); g.input.keys.down = false;
   assert(g.player.y + g.player.h > TS * 30 + 8, 'começou a descer');
   // vira no patamar e continua descendo sem segurar S
@@ -164,7 +164,7 @@ test('Escada: segurar S no corredor desce; o patamar continua descendo', () => {
 });
 test('Pular no meio da escada não prende na laje de cima', () => {
   const g = fakeGame();
-  g.player.x = TS * 32 + 3; g.player.y = TS * 36 - 26 - 4; run(g, 0.4);
+  g.player.x = TS * 32 + 3; g.player.y = TS * 36 - G.PH - 4; run(g, 0.4);
   g.input.keys.hit_jump = true; g.input.keys.jump = true;
   run(g, 1, (i) => { if (i === 1) g.input.keys.hit_jump = false; });
   g.input.keys.jump = false; run(g, 0.5);
@@ -173,13 +173,13 @@ test('Pular no meio da escada não prende na laje de cima', () => {
 });
 test('Alçapão fechado barra a subida para o telhado', () => {
   const g = fakeGame();
-  g.player.x = TS * 36; g.player.y = TS * 26 - 26; run(g, 0.3);
+  g.player.x = TS * 36; g.player.y = TS * 26 - G.PH; run(g, 0.3);
   g.input.keys.left = true; run(g, 3); g.input.keys.left = false;
   g.input.keys.right = true; run(g, 3);
   assert(g.player.y + g.player.h > TS * 22 + 8, 'não chegou ao telhado: pés em ' + (g.player.y + g.player.h));
   assert(!inSolid(g, g.player), 'não entrou no alçapão');
   for (const [x, y] of G.HATCH_CELLS) g.world.set(x, y, G.TILES[g.world.get(x, y)].toggle);
-  g.input.keys.right = false; g.player.x = TS * 36; g.player.y = TS * 26 - 26; run(g, 0.3);
+  g.input.keys.right = false; g.player.x = TS * 36; g.player.y = TS * 26 - G.PH; run(g, 0.3);
   g.input.keys.left = true;
   for (let k = 0; k < 400 && !(g.player.y + g.player.h <= TS * 24 + 0.5 && g.player.x < TS * 32); k++) run(g, STEP);
   g.input.keys.left = false; g.input.keys.right = true; run(g, 2.5);
@@ -188,7 +188,7 @@ test('Alçapão fechado barra a subida para o telhado', () => {
 test('Voo livre: Pular de novo no ar entra em voo controlado; W sobe, S desce, chão encerra', () => {
   const g = fakeGame();
   g.powers.vooLivre = true;
-  g.player.x = TS * 72; g.player.y = TS * 38 - 26; run(g, 0.3);
+  g.player.x = TS * 72; g.player.y = TS * 38 - G.PH; run(g, 0.3);
   g.input.keys.hit_jump = true; g.input.keys.jump = true; run(g, STEP); g.input.keys.hit_jump = false; g.input.keys.jump = false;
   run(g, 0.2);
   g.input.keys.hit_jump = true; run(g, STEP); g.input.keys.hit_jump = false;
@@ -202,14 +202,14 @@ test('Voo livre: Pular de novo no ar entra em voo controlado; W sobe, S desce, c
 });
 test('Correr é mais rápido que andar', () => {
   const g = fakeGame();
-  g.player.x = TS * 66; g.player.y = TS * 38 - 26; run(g, 0.2);
+  g.player.x = TS * 66; g.player.y = TS * 38 - G.PH; run(g, 0.2);
   g.input.keys.right = true; run(g, 0.6); const walk = g.player.vx;
   g.input.keys.run = true; run(g, 0.6);
   assert(g.player.vx > walk * 1.4, 'correndo ' + g.player.vx.toFixed(0) + ' vs ' + walk.toFixed(0));
 });
 test('Levantar com animação: deitado → sentado → em pé', () => {
   const g = fakeGame();
-  g.player.setPose('collapse', TS * 55, TS * 30 - 26, 1);
+  g.player.setPose('collapse', TS * 55, TS * 30 - G.PH, 1);
   let done = false;
   g.player.getUp(() => { done = true; });
   assert(g.player.pose === 'sitFloor', 'primeiro senta');
@@ -219,7 +219,7 @@ test('Levantar com animação: deitado → sentado → em pé', () => {
 test('Empurrar um caixote andando contra ele', () => {
   const g = fakeGame();
   const c = g.propById('caixote4');
-  g.player.x = c.x - 14; g.player.y = TS * 38 - 26; run(g, 0.2);
+  g.player.x = c.x - 14; g.player.y = TS * 38 - G.PH; run(g, 0.2);
   const cx0 = c.x;
   g.input.keys.right = true; run(g, 1.5);
   assert(c.x > cx0 + 10, 'caixote andou ' + (c.x - cx0).toFixed(1));
@@ -286,7 +286,7 @@ test('Levitar: o objeto segue o alvo e o custo cresce com a massa', () => {
   P.up(ps, g);
   ps.tension = 0;
   const g2 = fakeGame(); g2.powers.unlock('levitar', { silent: true });
-  g2.player.x = TS * 12; g2.player.y = TS * 38 - 26;
+  g2.player.x = TS * 12; g2.player.y = TS * 38 - G.PH;
   const crate = g2.propById('caixote4');
   P.down(g2.powers, g2, crate.cx, crate.cy);
   for (let i = 0; i < 60; i++) { P.hold(g2.powers, g2, STEP, crate.cx, crate.cy - 20); crate.update(STEP, g2); }
@@ -296,7 +296,7 @@ test('Não dá para levitar o objeto em que V está pisando', () => {
   const g = fakeGame();
   g.powers.unlock('levitar', { silent: true });
   const crate = g.propById('caixote4');
-  g.player.x = crate.x + 2; g.player.y = crate.y - 26 - 2; run(g, 0.3);
+  g.player.x = crate.x + 2; g.player.y = crate.y - G.PH - 2; run(g, 0.3);
   assert(g.player.groundRef === crate, 'V está em cima do caixote');
   G.POWERS.levitar.down(g.powers, g, crate.cx, crate.cy);
   assert(g.powers.held === null, 'recusou erguer o próprio apoio');
@@ -409,13 +409,13 @@ test('Mapa: diferenças (portas abertas) são salvas e reaplicadas', () => {
 });
 test('Abrir/fechar portas respeita trancas e quem está no caminho', () => {
   const g = fakeGame();
-  g.player.x = TS * 36; g.player.y = TS * 26 - 26;
+  g.player.x = TS * 36; g.player.y = TS * 26 - G.PH;
   G.toggleDoor(g, 'alcapao', G.HATCH_CELLS);
   assert(g.world.isSolid(33, 22), 'alçapão trancado sem a chave');
   g.inventory.add('chave_terraco');
   G.toggleDoor(g, 'alcapao', G.HATCH_CELLS);
   assert(!g.world.isSolid(33, 22), 'abriu com a chave');
-  g.player.x = TS * 38; g.player.y = TS * 30 - 26;
+  g.player.x = TS * 38; g.player.y = TS * 30 - G.PH;
   G.toggleDoor(g, 'porta_apto', [[38, 28], [38, 29]]);
   assert(!g.world.isSolid(38, 28), 'porta do apartamento abriu');
   G.toggleDoor(g, 'porta_apto', [[38, 28], [38, 29]]);

@@ -428,9 +428,11 @@
     desc: 'O mesmo que fez com o controle remoto, agora consigo mesmo. O destino precisa estar livre e ao alcance. Quem vir, vai se assustar.',
     target(ps, g, x, y) {
       const p = g.player;
-      const r = { x: Math.round(x - p.w / 2), y: Math.round(y - p.h / 2), w: p.w, h: p.h };
-      let ok = g.world.rectFree(r) && ps.inRange(x, y);
-      if (ok) for (const q of g.props) if (!q.removed && (q.solid || q.platform) && U.overlap(r, q)) { ok = false; break; }
+      const fits = (r) => g.world.rectFree(r) && !g.props.some((q) => !q.removed && (q.solid || q.platform) && U.overlap(r, q));
+      let r = { x: Math.round(x - p.w / 2), y: Math.round(y - p.h / 2), w: p.w, h: p.h };
+      // clicou perto do chão: sobe o destino até caber em pé
+      for (let k = 0; k <= p.h && !fits(r); k += 2) r = { x: r.x, y: Math.round(y - p.h / 2) - k, w: p.w, h: p.h };
+      const ok = fits(r) && ps.inRange(x, y);
       return { r, ok };
     },
     down(ps, g, x, y) {
