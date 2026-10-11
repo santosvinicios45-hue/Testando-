@@ -31,7 +31,7 @@
       this.landT = 0; this.stepT = 0;
       this.walkTo = null;        // x alvo em cenas
       this.fallStart = null;
-      this.stair = null; this.carry = null; this.sweepT = 0; this.poseQueue = null; this.poseDone = null; this.running = false;
+      this.stairDir = 0; this.onSlope = false; this.hover = false; this.carry = null; this.sweepT = 0; this.poseQueue = null; this.poseDone = null; this.running = false;
     }
     get cx() { return this.x + this.w / 2; }
     get cy() { return this.y + this.h / 2; }
@@ -53,49 +53,6 @@
       if (this.pose === 'collapse') seq.push({ pose: 'sitFloor', dur: 0.6 });
       seq.push({ pose: 'rise', dur: 0.25 });
       this.poseQueue = seq; this.poseDone = done || null; this.pose = seq[0].pose;
-    }
-
-    /** Pé de um lance de escada perto de V ('bottom' ou 'top'). */
-    stairFoot(game, end) {
-      for (const s of game.stairs || []) {
-        const fx = end === 'bottom' ? s.x0 : s.x1, fy = end === 'bottom' ? s.y0 : s.y1;
-        if (Math.abs(this.x - fx) < 10 && Math.abs(this.y + this.h - fy) < 3) return s;
-      }
-      return null;
-    }
-    enterStair(s, fromTop) {
-      this.stair = { s, t: fromTop ? 0.995 : 0.005 };
-      this.vx = 0; this.vy = 0;
-    }
-    updateStair(dt, game, control) {
-      const inp = game.input, st = this.stair, s = st.s;
-      const hx = Math.sign(s.x1 - s.x0) || 1;
-      const L = Math.hypot(s.x1 - s.x0, s.y1 - s.y0);
-      let dir = 0;
-      if (control) {
-        if (inp.is('jump') || inp.is(hx > 0 ? 'right' : 'left')) dir = 1;
-        if (inp.is('down') || inp.is(hx > 0 ? 'left' : 'right')) dir = -1;
-      }
-      const speed = (control && inp.is('run') ? 105 : 60) / L;
-      st.t += dir * speed * dt;
-      if (s.hatch && game.world.isSolid(32, 22) && st.t > 0.6) {
-        st.t = 0.6;
-        if (!(this._hatchMsg > 0)) { game.bubble('O alçapão lá em cima está trancado.', 1.8, true); this._hatchMsg = 2.5; }
-      }
-      if (this._hatchMsg > 0) this._hatchMsg -= dt;
-      this.vx = 0; this.vy = 0; this.onGround = true;
-      if (st.t >= 1) { this.x = s.x1; this.y = s.y1 - this.h; this.stair = null; return; }
-      if (st.t <= 0) { this.x = s.x0; this.y = s.y0 - this.h; this.stair = null; return; }
-      this.x = s.x0 + (s.x1 - s.x0) * st.t;
-      // degraus de 8 px: o corpo sobe em "pulinhos" em vez de deslizar
-      const rise = (s.y0 - s.y1) * st.t;
-      this.y = s.y0 - Math.round(rise / 8) * 8 - this.h;
-      if (dir) {
-        this.facing = dir * hx > 0 ? 1 : -1;
-        this.state = 'walk';
-        this.stepT -= dt;
-        if (this.stepT <= 0) { this.stepT = 0.22; game.audio.play('step', 0.6); }
-      } else this.state = 'idle';
     }
 
     standingOnOneWay(game) {
@@ -141,13 +98,6 @@
       }
 
       const control = !this.locked && this.stun <= 0 && game.canControl();
-      if (this.stair) { this.updateStair(dt, game, control); this.updateCarry(dt); return; }
-      if (control && this.onGround) {
-        const up = inp.hit('jump') && this.stairFoot(game, 'bottom');
-        const down = inp.hit('down') && this.stairFoot(game, 'top');
-        if (up) { this.enterStair(up, false); return; }
-        if (down) { this.enterStair(down, true); return; }
-      }
       let move = 0;
       if (control) {
         if (inp.is('left')) move -= 1;
@@ -180,28 +130,48 @@
         game.audio.play('jump', 0.7);
         game.particles.dust(this.cx, this.y + this.h, 3);
       }
-      if (!inp.is('jump') && this.vy < -80 && !this.jumpCut && !this.flying) { this.vy *= CFG.jumpCut; this.jumpCut = true; }
+      if (!inp.is('jump') && this.vy < -80 && !this.jumpCut && !this.hover) { this.vy *= CFG.jumpCut; this.jumpCut = true; }
 
-      // teste de voo (cap. 2): segurar Pular no ar ergue V — sem controle fino ainda
-      this.flying = false;
+      // voo livre (depois do cap. 2): no ar, apertar Pular entra em voo controlado.
+      // W/S sobem e descem, A/D movem; encostar no chão encerra o voo.
       const livre = !!(game.powers && game.powers.vooLivre);
-      if ((this.flyEnabled || livre) && !this.onGround && control && inp.is('jump') && this.flyFuel > 0 && this.vy > -CFG.jumpVel * 0.6) {
+      this.flying = false;
+      if (livre && control && !this.onGround && !this.hover && inp.hit('jump') && this.coyote <= 0 && game.powers.unravelT <= 0) {
+        this.hover = true; this.jumpBuf = 0;
+        game.audio.play('lift', 0.6);
+      }
+      if (this.hover && (this.onGround || !control || game.powers.unravelT > 0 || !livre)) this.hover = false;
+      if (this.hover) {
+        let my = 0;
+        if (inp.is('jump')) my -= 1;
+        if (inp.is('down')) my += 1;
+        const sp = this.running ? 165 : 115;
+        this.vx = U.approach(this.vx, move * sp, 520 * dt);
+        this.vy = U.approach(this.vy, my * sp * 0.85 + (my ? 0 : Math.sin(this.anim * 3) * 6), 520 * dt);
+        this.flying = true;
+        game.powers.cost((my || move ? 7 : 4) * dt);
+        if (Math.random() < 0.35) game.particles.spark(this.cx + U.rand(-3, 3), this.y + this.h, '#bfe3ff');
+        this._flyEv = (this._flyEv || 0) - dt;
+        if (this._flyEv <= 0) { this._flyEv = 1.2; game.bus.emit('fly', { x: this.cx, y: this.cy }); }
+      } else if (this.flyEnabled && !this.onGround && control && inp.is('jump') && this.flyFuel > 0 && this.vy > -CFG.jumpVel * 0.6) {
+        // teste de voo (cap. 2): segurar Pular no ar ergue V — sem controle fino ainda
         this.vy = U.approach(this.vy, -CFG.flyVel, CFG.flyAccel * dt);
         this.flyFuel -= dt; this.flying = true;
-        if (livre && !this.flyEnabled) game.powers.cost(12 * dt);
         if (Math.random() < 0.6) game.particles.spark(this.cx + U.rand(-3, 3), this.y + this.h, '#bfe3ff');
         this._flyEv = (this._flyEv || 0) - dt;
         if (this._flyEv <= 0) { this._flyEv = 0.6; game.bus.emit('fly', { x: this.cx, y: this.cy }); }
       }
-      if (this.onGround) this.flyFuel = livre ? 2.8 : 1.4;
+      if (this.onGround) this.flyFuel = 1.4;
 
       // gravidade
       if (!this.flying) this.vy = Math.min(this.vy + CFG.gravity * dt, CFG.maxFall);
 
       const wasGround = this.onGround;
       if (!this.onGround && this.fallStart === null) this.fallStart = this.y;
+      const prevX = this.x, prevY = this.y, prevFeet = this.y + this.h, wasSlope = this.onSlope;
+      this.onSlope = false;
       G.Physics.move(this, game.world, {
-        dt, dropThrough: this.dropT > 0,
+        dt, dropThrough: this.dropT > 0, stepUp: 8, grounded: wasGround,
         solids: game.solidProps(),
         platforms: game.platformProps(),
         onPush: (s, d) => {
@@ -211,6 +181,21 @@
           }
         },
       });
+
+      // degraus: nas bifurcações, S desce; sem S, mantém o sentido em que vinha (padrão: subir)
+      const wantDown = control && inp.is('down');
+      const prefer = wantDown ? 'down' : (this.stairDir > 0 ? 'down' : 'up');
+      const sl = G.Physics.resolveSlope(this, game.world, { prevFeet, wasGround, prefer });
+      if (sl === 'blocked') {
+        this.x = prevX; this.y = prevY; this.vx = 0; this.vy = 0; this.onGround = wasGround; this.onSlope = wasSlope;
+        if (wasSlope && game.world.isSolid(32, 22) && this.y < TS * 25 && !(this._hatchMsg > 0)) {
+          game.bubble('O alçapão lá em cima está fechado.', 1.8, true); this._hatchMsg = 3;
+        }
+      } else if (sl === 'snap') {
+        const d = this.y + this.h - prevFeet;
+        if (Math.abs(d) > 1) this.stairDir = Math.sign(d);
+      } else if (this.onGround) this.stairDir = 0;
+      if (this._hatchMsg > 0) this._hatchMsg -= dt;
 
       if (this.hitCeil) {
         if (this.flyingBefore || this.flying) game.bus.emit('player:ceiling', { flying: true, speed: this.impactY });

@@ -14,6 +14,7 @@
     TILEF: 8, PLATFORM: 10, DOOR_C: 11, DOOR_O: 12, GDOOR_C: 13, GDOOR_O: 14,
     HATCH_C: 15, HATCH_O: 16, RAIL: 17, GRASS: 18, BEDROCK: 19, FENCE: 20, MANHOLE: 21,
     GLASS: 22, ROOF: 23, GRAVEL: 24, FACADE: 25,
+    STAIR_L: 26, STAIR_R: 27, STAIR_F: 28, HATCH_SC: 29, HATCH_SO: 30,
   };
 
   const def = (o) => Object.assign({ solid: false, oneWay: false, name: '?', toggle: null }, o);
@@ -43,6 +44,14 @@
   G.TILES[T.ROOF] = def({ name: 'Laje', solid: true });
   G.TILES[T.GRAVEL] = def({ name: 'Cascalho', solid: true });
   G.TILES[T.FACADE] = def({ name: 'Fachada', solid: true });
+  // Degraus (estilo Terraria): não têm colisão de caixa; o jogador anda sobre a
+  // superfície inclinada (ver Physics.slopeSurface). 'L' sobe para a esquerda,
+  // 'R' sobe para a direita, 'F' é o patamar plano.
+  G.TILES[T.STAIR_L] = def({ name: 'Degrau', slope: 'L' });
+  G.TILES[T.STAIR_R] = def({ name: 'Degrau', slope: 'R' });
+  G.TILES[T.STAIR_F] = def({ name: 'Patamar', slope: 'F' });
+  G.TILES[T.HATCH_SC] = def({ name: 'Alçapão (fechado)', solid: true, door: true, toggle: T.HATCH_SO });
+  G.TILES[T.HATCH_SO] = def({ name: 'Alçapão (aberto)', slope: 'R', door: true, toggle: T.HATCH_SC });
 
   const B = G.B = {
     NONE: 0, SALA: 1, QUARTO: 2, COZINHA: 3, BRICK: 4, CONCRETE: 5, BANHEIRO: 6,
@@ -157,7 +166,15 @@
     w.fill(60, 22, 60, 37, T.BRICK);
     for (const row of [34, 30, 26]) w.fill(30, row, 60, row, T.CONCRETE);
     w.fill(30, 22, 60, 22, T.ROOF);
-    w.fill(32, 22, 34, 22, T.HATCH_C);     // alçapão do telhado
+    // poço da escada (x 31..33): lajes abertas e dois lances por andar
+    for (const r of [34, 30, 26]) { w.fill(31, r, 33, r, T.AIR); w.fillBg(31, r, 33, r, B.CORREDOR); }
+    for (const r of [38, 34, 30, 26]) {
+      w.set(33, r - 1, T.STAIR_L); w.set(32, r - 2, T.STAIR_L);   // 1º lance (sobe para a esquerda)
+      w.set(31, r - 2, T.STAIR_F);                                 // patamar
+      w.set(32, r - 3, T.STAIR_R); w.set(33, r - 4, T.STAIR_R);   // 2º lance (sobe para a direita)
+    }
+    w.fill(31, 22, 32, 22, T.HATCH_C);     // alçapão do telhado (cobre o poço)
+    w.set(33, 22, T.HATCH_SC);
     // portaria
     w.set(60, 36, T.DOOR_C); w.set(60, 37, T.DOOR_C);
     // janelas laterais
@@ -211,8 +228,8 @@
       { id: 'copo', type: 'copo', x: t(51) + 6, y: counterTop - 6 },
       { id: 'colher', type: 'colher', x: t(52) + 6, y: counterTop - 2 },
       { id: 'vassoura', type: 'vassoura', x: t(41) + 9, y: floorApt - 24 },
-      { id: 'controle', type: 'controle', x: t(57) + 6, y: floorApt - 8 - 3 },
-      { id: 'cadeira', type: 'cadeira', x: t(55) + 3, y: floorApt - 14 },
+      { id: 'controle', type: 'controle', x: t(57) + 10, y: floorApt - 8 - 3 },
+      { id: 'cadeira', type: 'cadeira', x: t(56) + 4, y: floorApt - 14 },
       { id: 'jogo1', type: 'jogo', x: t(53) + 3, y: floorApt - 22 - 6, state: { cor: '#c0392b' } },
       { id: 'jogo2', type: 'jogo', x: t(53) + 8, y: floorApt - 22 - 6, state: { cor: '#2e86de' } },
       { id: 'livro', type: 'livro', x: t(53) + 5, y: floorApt - 34 - 6 },
@@ -251,16 +268,17 @@
       { type: 'torneira', x: t(51) + 1, y: counterTop - 7, w: 6, h: 7 },
       // sala
       { type: 'estante', x: t(53), y: floorApt - 44, w: 16, h: 44, surfaces: [[1, 22, 14], [1, 10, 14], [1, 34, 14]] },
-      { type: 'mesa', x: t(54) + 2, y: floorApt - 13, w: 28, h: 13, surfaces: [[0, 0, 28]] },
-      { type: 'notebook', x: t(54) + 19, y: floorApt - 20, w: 9, h: 7 },
-      { type: 'celular', x: t(54) + 3, y: floorApt - 15, w: 5, h: 2 },
-      { type: 'caderno', x: t(54) + 12, y: floorApt - 15, w: 5, h: 2 },
-      { type: 'mesinha', x: t(56) + 3, y: floorApt - 10, w: 10, h: 10, surfaces: [[0, 0, 10]] },
-      { type: 'abajur', x: t(56) + 4, y: floorApt - 22, w: 8, h: 12 },
-      { type: 'sofa', x: t(57), y: floorApt - 15, w: 30, h: 15, surfaces: [[3, 7, 24]] },
-      { type: 'tv', x: t(54) + 8, y: t(27) + 3, w: 16, h: 11, wall: true },
-      { type: 'planta', x: t(59) + 3, y: floorApt - 18, w: 10, h: 18 },
-      { type: 'lustre', x: t(55) + 4, y: t(27), w: 8, h: 6 },
+      { type: 'rack', x: t(54) + 1, y: floorApt - 9, w: 15, h: 9, surfaces: [[0, 0, 15]] },
+      { type: 'tv', x: t(54) + 1, y: floorApt - 21, w: 15, h: 12 },
+      { type: 'mesa', x: t(55) + 2, y: floorApt - 13, w: 26, h: 13, surfaces: [[0, 0, 26]] },
+      { type: 'notebook', x: t(55) + 17, y: floorApt - 20, w: 9, h: 7 },
+      { type: 'celular', x: t(55) + 3, y: floorApt - 15, w: 5, h: 2 },
+      { type: 'caderno', x: t(55) + 10, y: floorApt - 15, w: 5, h: 2 },
+      { type: 'sofa', x: t(57) + 1, y: floorApt - 15, w: 30, h: 15, surfaces: [[3, 7, 24]] },
+      { type: 'mesinha', x: t(59) + 1, y: floorApt - 10, w: 10, h: 10, surfaces: [[0, 0, 10]] },
+      { type: 'abajur', x: t(59) + 2, y: floorApt - 22, w: 8, h: 12 },
+      { type: 'quadro', x: t(57) + 6, y: t(27) + 5, w: 20, h: 13 },
+      { type: 'lustre', x: t(56) + 4, y: t(27), w: 8, h: 6 },
       { type: 'interruptor', x: t(49) - 3, y: floorApt - 18, w: 3, h: 4 },
       // quarto
       { type: 'guarda_roupa', x: t(43) + 1, y: floorApt - 36, w: 14, h: 36 },
@@ -315,6 +333,10 @@
       { type: 'placa', x: t(80) + 4, y: ground - 26, w: 18, h: 26, text: 'PRAÇA' },
       // padaria
       { type: 'letreiro', x: t(103), y: t(33) + 4, w: t(8), h: 12, text: 'PADARIA' },
+      { type: 'toldo', x: t(98) + 6, y: t(35), w: 58, h: 12, front: true },
+      { type: 'vaso_rua', x: t(100) + 2, y: ground - 12, w: 10, h: 12 },
+      { type: 'lixeira', x: t(127) + 4, y: ground - 14, w: 9, h: 14 },
+      { type: 'hidrante', x: t(64) + 4, y: ground - 10, w: 6, h: 10 },
       { type: 'prateleira_pao', x: t(108), y: t(35) + 1, w: 64, h: 18 },
       { type: 'balcao', x: t(108) + 4, y: ground - 15, w: 60, h: 15, surfaces: [[0, 0, 60]], front: true },
       { type: 'mesa_bar', x: t(117), y: ground - 13, w: 20, h: 13 },
@@ -326,9 +348,9 @@
     // ---------- luzes ----------
     // on(game) decide se está acesa; cor em "r,g,b"
     const lights = [
-      { id: 'luz_sala', x: t(55) + 8, y: t(27) + 6, r: 80, color: '255,226,170', flag: 'luz_sala' },
+      { id: 'luz_sala', x: t(56) + 8, y: t(27) + 6, r: 80, color: '255,226,170', flag: 'luz_sala' },
       { id: 'luz_quarto', x: t(45) + 8, y: t(27) + 6, r: 60, color: '255,226,170', flag: 'luz_sala' },
-      { id: 'abajur', x: t(56) + 8, y: floorApt - 18, r: 46, color: 'abajur', flag: 'abajur' },
+      { id: 'abajur', x: t(59) + 6, y: floorApt - 18, r: 46, color: 'abajur', flag: 'abajur' },
       { id: 'luz_banheiro', x: t(6), y: t(43) + 4, r: 70, color: '230,240,255', always: true },
       { id: 'corredor1', x: t(46) + 4, y: t(31) + 3, r: 70, color: '240,235,210', always: true },
       { id: 'corredor2', x: t(36) + 4, y: t(27) + 3, r: 55, color: '240,235,210', always: true },
@@ -346,8 +368,8 @@
       { id: 'passeador', kind: 'passeador', x: t(70), y: ground - 26 },
       { id: 'moto', kind: 'moto', x: t(78), y: ground - 26 },
       { id: 'senhora', kind: 'senhora', x: t(100), y: ground - 24 },
-      { id: 'casal_a', kind: 'casal_a', x: t(90) + 4, y: ground - 26 },
-      { id: 'casal_b', kind: 'casal_b', x: t(91) + 10, y: ground - 25 },
+      { id: 'casal_a', kind: 'casal_a', x: t(94) + 6, y: ground - 26 },
+      { id: 'casal_b', kind: 'casal_b', x: t(95) + 8, y: ground - 25 },
       { id: 'crianca', kind: 'crianca', x: t(86) + 12, y: ground - 18 },
       { id: 'porteiro', kind: 'porteiro', x: t(53) + 6, y: ground - 26, behind: true },
       { id: 'atendente', kind: 'atendente', x: t(110) + 4, y: ground - 26, behind: true },
@@ -365,14 +387,8 @@
       chaoCozinha: { x: t(49) - 4, y: floorApt - 4, w: 24, h: 4 },
     };
 
-    // ---------- escada do prédio (lances em zigue-zague) ----------
-    const xa = t(31) + 2, xb = t(35) + 2;
-    const stairs = [
-      { id: 'lance0', x0: xa, y0: t(38), x1: xb, y1: t(34) },
-      { id: 'lance1', x0: xb, y0: t(34), x1: xa, y1: t(30) },
-      { id: 'lance2', x0: xa, y0: t(30), x1: xb, y1: t(26) },
-      { id: 'lance3', x0: xb, y0: t(26), x1: t(32) + 3, y1: t(22), hatch: true },
-    ];
+    // escada: agora são blocos de degrau no próprio mapa (T.STAIR_*)
+    const stairs = [];
 
     // ---------- pombos da praça ----------
     const pigeons = [];

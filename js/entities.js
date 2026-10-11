@@ -118,13 +118,15 @@
       } else {
         this.vy = Math.min(this.vy + GRAV * dt, 620);
       }
-      const prevVx = this.vx, prevVy = this.vy;
+      const prevVx = this.vx, prevVy = this.vy, prevFeet = this.y + this.h;
       G.Physics.move(this, game.world, {
         dt,
         solids: game.solidPropsExcept(this),
         platforms: game.platformPropsExcept(this),
         surfaces: game.surfaces,
       });
+      // objetos também param sobre os degraus da escada
+      if (!this.held && !this.onGround) G.Physics.resolveSlope(this, game.world, { prevFeet, wasGround: false });
 
       // carregado por quem está embaixo (caixote sobre caixote empurrado)
       if (this.groundRef && this.groundRef.lastDx) this.x += this.groundRef.lastDx * 0.9;
@@ -368,6 +370,7 @@
       this.anim = 0; this.moving = false; this.say = null; this.sayT = 0;
       this.homeX = this.x; this.phase = 0; this.timer = U.rand(1, 4); this.visibleNow = true;
       this.scared = 0; this.stare = 0; this.hitT = 0; this.alert = 0; this.memory = {};
+      this.cool = {}; this.cower = 0; this.returning = false;
       if (this.kind === 'moto') { this.w = 24; this.h = 20; this.y += 6; }
       if (this.kind === 'senhora') { this.h = 24; }
       if (this.kind === 'crianca') { this.h = 18; }
@@ -381,11 +384,18 @@
     react(type, game, x) {
       if (!this.visibleNow || this.alpha === 0) return false;
       if (this.kind === 'moto' && this.phase !== 3) return false;
+      const fixed = this.fixed || this.behind || this.kind === 'moto';
+      // a mesma coisa de novo em poucos segundos: só olha (sem novo susto, fala ou testemunha)
+      if (this.cool[type] > 0 || (this.scared > 0 && type === 'fly')) {
+        if (!(this.scared > 0)) { this.facing = x > this.cx ? 1 : -1; this.stare = Math.max(this.stare, 1); }
+        return false;
+      }
+      this.cool[type] = 7;
       this.talk(U.choice(REACT[type] || ['?']), 2.6);
       this.alert = 1.5;
       this.facing = x > this.cx ? 1 : -1;
       this.memory[type] = (this.memory[type] || 0) + 1;
-      if ((type === 'fly' || type === 'teleport' || type === 'hit') && !this.fixed) this.scared = 3.5;
+      if ((type === 'fly' || type === 'teleport' || type === 'hit') && !fixed) { this.scared = 1.6; this.cower = 2.2; this.fleeFrom = x; this.returning = false; }
       else this.stare = 2.5;
       if (type === 'hit') this.hitT = 0.4;
       if (this.dog) this.dog.bark = 1;
@@ -397,6 +407,7 @@
       if (this.sayT > 0) this.sayT -= dt;
       if (this.alert > 0) this.alert -= dt;
       if (this.hitT > 0) this.hitT -= dt;
+      for (const k in this.cool) if (this.cool[k] > 0) this.cool[k] -= dt;
       const day = this.isDaytime(game);
       const T = G.TILE;
       this.moving = false;
@@ -404,17 +415,26 @@
       this.visibleNow = day;
       if (!day) return;
       const p = game.player;
-      // susto: foge de V, depois volta para o lugar
+      // susto: corre alguns passos para longe, encolhe olhando para V e depois volta ao lugar
+      const roam = this.kind === 'passeador';
       if (this.scared > 0) {
         this.scared -= dt;
-        const away = this.cx > p.cx ? 1 : -1;
-        const nx = this.x + away * 70 * dt;
-        if (nx > T * 62 && nx < T * 100) this.x = nx;
-        this.facing = away; this.moving = true; this.anim += dt * 16;
-        if (this.dog) { this.dog.x = U.lerp(this.dog.x, this.x + away * 18, 0.2); this.dog.anim += dt * 20; this.dog.dir = away; }
+        const away = this.cx >= this.fleeFrom ? 1 : -1;
+        const lim = roam ? 1e9 : 56;
+        const nx = U.clamp(this.x + away * 62 * dt, Math.max(T * 62, this.homeX - lim), Math.min(T * 100, this.homeX + lim));
+        if (Math.abs(nx - this.x) > 0.01) { this.x = nx; this.moving = true; this.anim += dt * 14; }
+        this.facing = away;
+        if (this.dog) { this.dog.x = U.lerp(this.dog.x, this.x + away * 18, 0.15); this.dog.anim += dt * 18; this.dog.dir = away; }
+        if (this.scared <= 0) this.returning = !roam;
         return;
       }
+      if (this.cower > 0) { this.cower -= dt; this.facing = p.cx > this.cx ? 1 : -1; return; }
       if (this.stare > 0) { this.stare -= dt; this.facing = p.cx > this.cx ? 1 : -1; return; }
+      if (this.returning) {
+        const d = this.homeX - this.x;
+        if (Math.abs(d) < 1) { this.x = this.homeX; this.returning = false; }
+        else { this.x += Math.sign(d) * Math.min(Math.abs(d), 30 * dt); this.facing = Math.sign(d); this.moving = true; this.anim += dt * 8; return; }
+      }
       if (this.kind === 'passeador') {
         // calçada e praça entre os dois prédios (não atravessa paredes)
         const minX = T * 62, maxX = T * 99;

@@ -17,6 +17,8 @@
     porta_predio: 'porta do prédio', porta_padaria: 'porta da padaria', alcapao: 'alçapão',
   };
 
+  G.HATCH_CELLS = [[31, 22], [32, 22], [33, 22]];
+
   G.padariaAberta = (g) => { const m = g.clock.min % 1440; return m >= 6 * 60 && m < 21 * 60; };
 
   function text(g, msg, orig) { g.bubble(msg, Math.min(5, 1.6 + msg.length / 28), orig); }
@@ -39,9 +41,9 @@
       });
     }
     add({
-      id: 'alcapao', x: TS * 32, y: TS * 22 + 4, w: TS * 3, h: 30,
+      id: 'alcapao', x: TS * 31, y: TS * 22 - 10, w: TS * 3, h: 52,
       label: (g2) => (G.TILES[g2.world.get(32, 22)].solid ? 'Abrir o alçapão' : 'Fechar o alçapão'),
-      action: (g2) => toggleDoor(g2, 'alcapao', [[32, 22], [33, 22], [34, 22]]),
+      action: (g2) => toggleDoor(g2, 'alcapao', G.HATCH_CELLS),
     });
 
     // ---------- cozinha ----------

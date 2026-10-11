@@ -20,6 +20,10 @@
    * Humanos (V e pessoas da rua). Caixa 10×26, (x,y) = canto superior.
    * ------------------------------------------------------------------ */
   function human(c, x, y, o) {
+    if (G.Characters && typeof document !== 'undefined') return G.Characters.draw(c, x + 5, y + 26, o);
+    return humanOld(c, x, y, o);
+  }
+  function humanOld(c, x, y, o) {
     const pal = o.pal || PAL_V;
     const f = o.facing >= 0 ? 1 : -1;
     const W = 10;
@@ -124,35 +128,54 @@
    * Animais e veículos
    * ------------------------------------------------------------------ */
   function dog(c, x, y, dir, anim) {
+    // caramelo vira-lata: 14×10 com contorno, 4 quadros de trote
     const f = dir >= 0 ? 1 : -1;
-    const px = (dx, dy, w, h, col) => R(c, f > 0 ? x + dx : x + (12 - dx - w), y + dy, w, h, col);
-    const s = Math.sin(anim);
-    px(1, 2, 8, 4, '#a0703c'); px(8, 0, 4, 4, '#a0703c'); px(11, 2, 1, 1, '#2b1d14'); px(10, 1, 1, 1, '#1b1b1b');
-    px(9, -1, 1, 2, '#7a5028'); px(0, 1 + (s > 0 ? 0 : 1), 2, 1, '#a0703c');
-    px(2 + (s > 0 ? 1 : 0), 6, 1, 2, '#7a5028'); px(7 - (s > 0 ? 1 : 0), 6, 1, 2, '#7a5028');
-    px(3 - (s > 0 ? 1 : 0), 6, 1, 2, '#a0703c'); px(6 + (s > 0 ? 1 : 0), 6, 1, 2, '#a0703c');
+    const fr = Math.floor(anim / 1.6) % 4;
+    const cv = G.Characters.cached('dog' + fr, 16, 12, (cx, P) => {
+      const b = '#c98a4a', bd = '#9c6534', bl = '#e2a96a';
+      const k = [0, 1, 0, -1][fr];
+      P(3, 4, 9, 4, b); P(3, 7, 9, 1, bd); P(4, 4, 6, 1, bl);           // corpo
+      P(10, 1, 5, 4, b); P(11, 1, 3, 1, bl); P(14, 3, 2, 2, bd);       // cabeça e focinho
+      P(15, 3, 1, 1, '#2b1d14'); P(12, 2, 1, 1, '#1b1b1b');            // nariz e olho
+      P(10, 0, 2, 2, bd);                                               // orelha
+      P(1, 3 + (fr % 2), 3, 1, b); P(0, 2 + (fr % 2), 1, 1, b);         // rabo abanando
+      P(4 + k, 8, 1, 3, bd); P(10 - k, 8, 1, 3, bd);                    // patas de trás
+      P(5 - k, 8, 1, 3, b); P(11 + k, 8, 1, 3, b);                      // patas da frente
+      P(10, 5, 2, 1, '#c0392b');                                        // coleira
+    });
+    if (f > 0) c.drawImage(cv, Math.round(x) - 2, Math.round(y) - 3);
+    else { c.save(); c.translate(Math.round(x) + 14, Math.round(y) - 3); c.scale(-1, 1); c.drawImage(cv, 0, 0); c.restore(); }
   }
   function moto(c, x, y, facing, anim, hop) {
-    // moto de entrega 24×20 com o entregador SENTADO por cima do banco
+    // moto de entrega com o entregador sentado no banco (caixa 24×20)
     const f = facing >= 0 ? 1 : -1;
-    const W = 24;
-    const px = (dx, dy, w, h, col) => R(c, f > 0 ? x + dx : x + (W - dx - w), y + dy, w, h, col);
     const lift = hop ? Math.round(hop * 3) : 0;
-    const wy = 15 - lift;
-    // rodas
-    px(1, wy, 6, 5, '#1b1b1b'); px(17, wy, 6, 5, '#1b1b1b'); px(3, wy + 2, 2, 1, '#9a9a9a'); px(19, wy + 2, 2, 1, '#9a9a9a');
-    // baú de entrega atrás
-    px(0, wy - 12, 8, 7, '#e67e22'); px(1, wy - 11, 6, 1, '#f5b041'); px(3, wy - 9, 2, 2, '#ffffff');
-    // chassi, banco e guidão
-    px(4, wy - 3, 16, 3, '#c0392b'); px(6, wy - 5, 9, 2, '#2b2b2b'); px(17, wy - 9, 2, 7, '#555'); px(16, wy - 10, 5, 1, '#333'); px(20, wy - 4, 2, 2, '#ffe08a');
-    // piloto sentado (quadril sobre o banco, mãos no guidão)
-    const sk = '#8d5a3b', jk = '#2c3e50', pt = '#34495e';
-    const by = wy - 6;
-    px(8, by - 9, 6, 8, jk);                 // tronco
-    px(13, by - 8, 4, 2, jk); px(16, by - 9, 1, 2, sk); // braço até o guidão
-    px(9, by - 15, 5, 6, sk); px(12, by - 13, 1, 1, '#111'); // cabeça
-    px(8, by - 16, 7, 4, '#c0392b'); px(13, by - 14, 2, 2, '#2b2b2b'); // capacete
-    px(9, by - 1, 7, 2, pt); px(14, by, 2, 5, pt); px(14, by + 4, 3, 2, '#222'); // perna no pedal
+    const fr = Math.floor(anim / 3) % 2;
+    const cv = G.Characters.cached('moto' + fr, 34, 40, (cx, P) => {
+      const wy = 33;
+      const wheel = (wx) => {
+        P(wx, wy - 3, 8, 8, '#1a1a1e'); P(wx + 1, wy - 4, 6, 10, '#1a1a1e'); P(wx - 1, wy - 2, 10, 6, '#1a1a1e');
+        P(wx + 2, wy - 1, 4, 4, '#8c939c'); P(wx + 3, wy, 2, 2, '#d0d4da');
+        if (fr) { P(wx + 3, wy - 2, 2, 1, '#55595f'); P(wx + 3, wy + 3, 2, 1, '#55595f'); } else { P(wx + 1, wy + 1, 1, 0 + 1, '#55595f'); P(wx + 6, wy + 1, 1, 1, '#55595f'); }
+      };
+      wheel(3); wheel(23);
+      // baú de entrega
+      P(1, wy - 19, 10, 9, '#e67e22'); P(1, wy - 19, 10, 2, '#f5b041'); P(1, wy - 11, 10, 1, '#b85f12'); P(4, wy - 16, 4, 3, '#fff3d6'); P(5, wy - 15, 2, 1, '#e67e22');
+      // quadro, tanque e carenagem
+      P(8, wy - 7, 16, 3, '#b8262b'); P(10, wy - 9, 12, 3, '#d83a3f'); P(11, wy - 9, 8, 1, '#f07a7e');
+      P(6, wy - 10, 9, 2, '#26262c');                     // banco
+      P(22, wy - 12, 3, 9, '#5b5f66'); P(23, wy - 14, 3, 2, '#2c2f35'); // garfo e guidão
+      P(25, wy - 10, 3, 3, '#d83a3f'); P(27, wy - 9, 2, 2, '#ffe08a'); // farol
+      P(4, wy - 5, 6, 2, '#6e737a'); P(2, wy - 5, 2, 1, '#9aa0a8');    // escapamento
+    });
+    const rider = G.Characters.frame({ state: 'sit', facing: 1, t: 0, hairStyle: 'helmet', carrying: true,
+      pal: { skin: '#8d5a3b', hair: '#111', shirt: '#2c3e50', pants: '#34495e', shoe: '#222', belt: '#222' } });
+    c.save();
+    const bx = Math.round(x) + (f > 0 ? -4 : 28), by = Math.round(y) - 20 + 2 - lift;
+    c.translate(bx, by); if (f < 0) c.scale(-1, 1);
+    c.drawImage(rider, 11 - G.Characters.X0, 24 - G.Characters.FY);
+    c.drawImage(cv, 0, 0);
+    c.restore();
   }
   function pigeon(c, x, y, fly, t, dir) {
     const f = dir >= 0 ? 1 : -1;
@@ -316,12 +339,24 @@
       case 'faixa': for (let i = 0; i < w; i += 8) R(c, x + i, y, 5, 1, '#f1f1ea'); break;
       case 'poste_ok': R(c, x + 6, y + 6, 2, h - 6, '#2f3439'); R(c, x + 6, y + 4, 8, 2, '#2f3439'); R(c, x + 10, y + 6, 4, 3, '#3b4249'); R(c, x + 11, y + 8, 2, 1, env.night > 0.25 ? '#ffe6a8' : '#888'); R(c, x + 4, y + h - 3, 6, 3, '#262a2e'); break;
       case 'carro': {
-        const col = d.cor || '#7d2e2e', k = w / 76;
-        const Q = (a, b, ww, hh, cc) => R(c, x + a * k, y + b * k, ww * k, hh * k, cc);
-        Q(2, 10, 72, 10, col); Q(16, 1, 38, 10, col); Q(19, 3, 15, 7, '#9fc3d6'); Q(36, 3, 15, 7, '#9fc3d6'); Q(34, 3, 2, 7, col);
-        Q(2, 10, 72, 1, 'rgba(255,255,255,0.25)'); Q(36, 12, 1, 7, 'rgba(0,0,0,0.35)'); Q(44, 13, 4, 1, '#ddd');
-        Q(9, 17, 11, 9, '#151515'); Q(55, 17, 11, 9, '#151515'); Q(12, 20, 5, 3, '#888'); Q(58, 20, 5, 3, '#888');
-        Q(71, 12, 3, 3, '#ffd166'); Q(2, 12, 2, 3, '#e74c3c'); break;
+        const col = d.cor || '#7d2e2e';
+        const cv = G.Characters.cached('carro' + col, 80, 30, (cx, P) => {
+          const cd = G.Characters.dark(col, 0.3), cl = G.Characters.light(col, 0.3), glass = '#8fb6cc', glassD = '#5f8aa3';
+          // carroceria
+          P(3, 12, 74, 10, col); P(2, 14, 76, 7, col); P(16, 4, 42, 9, col); P(18, 3, 37, 2, col);
+          P(3, 12, 74, 1, cl); P(18, 3, 37, 1, cl); P(2, 19, 76, 3, cd);
+          // vidros
+          P(20, 5, 15, 7, glass); P(37, 5, 17, 7, glass); P(21, 6, 4, 5, '#c7e0ee'); P(38, 6, 3, 5, '#c7e0ee'); P(20, 11, 15, 1, glassD); P(37, 11, 17, 1, glassD);
+          P(35, 5, 2, 8, cd); P(54, 5, 3, 7, col);
+          // portas, maçanetas, retrovisor
+          P(36, 13, 1, 7, cd); P(55, 13, 1, 7, cd); P(30, 15, 4, 1, '#e9e9e9'); P(49, 15, 4, 1, '#e9e9e9'); P(56, 9, 3, 2, cd);
+          // para-choques e luzes
+          P(0, 17, 5, 3, '#c9ccd1'); P(75, 17, 5, 3, '#c9ccd1'); P(75, 13, 3, 3, '#ffe08a'); P(2, 13, 2, 3, '#e74c3c');
+          // rodas
+          for (const wx of [10, 56]) { P(wx, 19, 14, 10, '#141418'); P(wx + 1, 18, 12, 1, '#141418'); P(wx + 3, 21, 8, 6, '#8c939c'); P(wx + 5, 23, 4, 2, '#d0d4da'); P(wx - 2, 17, 18, 2, cd); }
+        });
+        c.drawImage(cv, Math.round(x) - 2, Math.round(y) - 3);
+        break;
       }
       case 'balcao_portaria': R(c, x, y, w, 3, '#d9d4c7'); R(c, x, y + 3, w, h - 3, '#5d4a3a'); R(c, x + 3, y + 5, w - 6, h - 8, '#6e5845'); R(c, x + 4, y - 7, 9, 7, '#1c232c'); R(c, x + 5, y - 6, 7, 4, '#4a7eb5'); R(c, x + 22, y - 2, 8, 2, '#e9dfc9'); break;
       case 'ponto': R(c, x, y, w, 3, '#5b6b75'); R(c, x + 2, y + 3, 2, h - 3, '#5b6b75'); R(c, x + w - 4, y + 3, 2, h - 3, '#5b6b75'); R(c, x + 6, y + 6, 18, 16, '#f0f0e8'); R(c, x + 7, y + 7, 16, 14, '#9ec5e8'); R(c, x + 6, y + h - 10, w - 10, 2, '#7a8a94'); break;
@@ -334,6 +369,19 @@
       case 'arbusto': c.fillStyle = '#2f7d3a'; c.beginPath(); c.ellipse(Math.round(x + w / 2), Math.round(y + h), w / 2, h, 0, Math.PI, 0); c.fill(); R(c, x + w / 2 - 2, y + 2, 3, 2, '#46ad54'); break;
       case 'banco_ok': bench(c, x, y, { broken: false }); break;
       case 'placa': R(c, x + 8, y + 8, 2, h - 8, '#555'); R(c, x, y, w, 9, '#2e7d4a'); c.fillStyle = '#fff'; c.font = '5px monospace'; c.textAlign = 'center'; c.fillText(d.text || '', x + w / 2, y + 6); break;
+      case 'toldo': {
+        // toldo listrado da padaria, com babado
+        R(c, x, y, w, 2, '#5a2a1e');
+        for (let i = 0; i < w; i += 6) { R(c, x + i, y + 2, 3, 7, '#d64541'); R(c, x + i + 3, y + 2, 3, 7, '#f6efe2'); }
+        for (let i = 0; i < w; i += 6) { R(c, x + i, y + 9, 3, 2, '#d64541'); R(c, x + i + 1, y + 11, 1, 1, '#a8322f'); R(c, x + i + 3, y + 9, 3, 2, '#f6efe2'); }
+        R(c, x, y + 2, w, 1, 'rgba(0,0,0,0.15)'); R(c, x, y + 2, 1, 10, '#5a2a1e');
+        break;
+      }
+      case 'vaso_rua': R(c, x + 1, y + 6, 8, 6, '#9c5a34'); R(c, x, y + 6, 10, 1, '#b8703f'); R(c, x + 2, y, 6, 6, '#3f8f45'); R(c, x + 1, y + 2, 2, 4, '#357a3a'); R(c, x + 7, y + 1, 2, 4, '#4fa654'); R(c, x + 4, y - 1, 2, 2, '#e74c3c'); break;
+      case 'lixeira': R(c, x, y, w, 2, '#1e6b3f'); R(c, x + 1, y + 2, w - 2, h - 4, '#2e8b57'); R(c, x + 2, y + 3, 1, h - 6, '#3fae6f'); R(c, x + 3, y + 5, w - 6, 2, '#f1f1f1'); R(c, x + 3, y + h - 2, 1, 2, '#555'); R(c, x + w - 4, y + h - 2, 1, 2, '#555'); break;
+      case 'hidrante': R(c, x + 1, y + 2, 4, 8, '#c0392b'); R(c, x, y + 4, 6, 2, '#a93226'); R(c, x + 1, y, 4, 2, '#e74c3c'); R(c, x + 2, y + 3, 1, 6, '#e8655a'); R(c, x, y + 9, 6, 1, '#7b241c'); break;
+      case 'quadro': R(c, x, y, w, h, '#6b4a2f'); R(c, x + 1, y + 1, w - 2, h - 2, '#f4ecdc'); R(c, x + 2, y + 2, w - 4, h - 4, '#8fc1d9'); R(c, x + 2, y + h - 6, w - 4, 4, '#5f9e55'); R(c, x + w - 8, y + 4, 3, 3, '#f9e27d'); R(c, x + 5, y + h - 9, 6, 3, '#4f8a47'); break;
+      case 'rack': R(c, x, y, w, 2, '#7a5236'); R(c, x, y + 2, w, h - 2, '#5e3f28'); R(c, x + 1, y + 3, w / 2 - 2, h - 5, '#4a3120'); R(c, x + w / 2, y + 3, w / 2 - 1, h - 5, '#4a3120'); R(c, x + 3, y + 4, 5, 2, '#1d1d22'); R(c, x + 4, y + 4, 1, 1, '#4cd964'); R(c, x + w / 2 + 2, y + 4, 3, 3, '#2c3e50'); break;
       case 'letreiro': R(c, x, y, w, h, '#7a2e1f'); R(c, x + 1, y + 1, w - 2, h - 2, '#a63d28'); c.fillStyle = '#ffe9b0'; c.font = '8px monospace'; c.textAlign = 'center'; c.fillText(d.text || '', x + w / 2, y + 9); break;
       case 'prateleira_pao': R(c, x, y, w, h, '#7a5230'); for (let j = 0; j < 2; j++) { R(c, x + 1, y + 7 + j * 8, w - 2, 1, '#9c6b3e'); for (let i = 0; i < 9; i++) R(c, x + 3 + i * 7, y + 3 + j * 8, 5, 3, '#d9a05b'); } break;
       case 'balcao': R(c, x, y, w, 3, '#d9d4c7'); R(c, x, y + 3, w, h - 3, '#a0522d'); R(c, x + 3, y + 5, w - 6, h - 8, '#b5653a'); R(c, x + 6, y - 6, 12, 6, 'rgba(200,230,255,0.4)'); R(c, x + 7, y - 4, 4, 2, '#d9a05b'); R(c, x + 12, y - 4, 4, 2, '#e8c07a'); break;

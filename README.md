@@ -26,8 +26,8 @@ O progresso fica no `localStorage` do navegador (3 espaços manuais + 1 automát
 |---|---|
 | A / D ou ← / → | Andar |
 | Shift (segurar) | Correr |
-| W, Espaço ou ↑ | Pular (segure para ir mais alto) · subir escada · voar no ar (depois do capítulo 2) |
-| S ou ↓ | Descer escada |
+| W, Espaço ou ↑ | Pular (segure para ir mais alto) · no ar, de novo: voar (depois do capítulo 2) · no voo: subir |
+| S ou ↓ | Na escada, segurar para pegar o lance de descida · descer de patamares · no voo: descer |
 | E ou Enter | Interagir / avançar diálogo |
 | 1–7 ou roda do mouse | Escolher poder |
 | Botão esquerdo | Usar o poder (segurar/arrastar/clicar) |
@@ -99,7 +99,8 @@ Criar começa só com a laranja (canônica); depois de comê-la, faz maçã, ban
 e no fim da etapa, dinheiro (com consequências: a atendente pode desconfiar de notas "novas demais").
 
 O voo aparece como evento do capítulo 2 (bater a cabeça no teto). Depois do fim do capítulo, fica
-liberado de forma instável: no ar, segure Pular; dura pouco e gasta a Linha.
+liberado: pule e, no ar, aperte Pular de novo para entrar em voo controlado (W/S sobem e
+descem, A/D movem, Shift acelera). Encostar no chão encerra o voo; enquanto dura, gasta a Linha.
 
 ### Pessoas que reagem
 
@@ -115,16 +116,24 @@ segredo do telhado (que pode terminar devolvendo a chave ao porteiro, Seu Valdir
 - Menu inicial com cenário animado, pausa, configurações (volume, tremor de tela, reduzir
   flashes, FPS, escala da tela, remapeamento de teclas), tela de controles e tela "Sobre".
 - Movimento com aceleração, atrito, coyote time, buffer de pulo, pulo variável e corrida;
-  colisão em sub-passos (não atravessa o chão nem prende na parede); escada de verdade entre os
-  andares (W sobe, S desce).
+  colisão em sub-passos (não atravessa o chão nem prende na parede); escada em degraus no estilo
+  Terraria: é só andar que V sobe os lances (segurar S na bifurcação pega o lance de descida),
+  com patamares, quinas que não prendem e o alçapão do telhado barrando a subida quando fechado.
 - Câmera com suavização e antecipação, mundo de 150×50 blocos maior que a tela.
 - Apartamento completo (cozinha, sala, quarto, hall, banheiro), prédio de 4 andares com
   escada e telhado, terreno baldio, rua, praça e padaria.
 - Objetos com física: empilhar, empurrar, arremessar, quebrar (copo, garrafa) e restaurar
   por rebobinamento do histórico de posições.
 - Os seis poderes, com a Linha, emoções e consequências.
-- Ciclo de dia e noite com céu, sol, lua, estrelas, nuvens, cidade em paralaxe com
-  janelas acesas, iluminação dinâmica (lustres, abajur colorido, TV, postes, padaria).
+- Personagens desenhados em quadros (estilo Stardew/Terraria): cabeça grande, sombreamento,
+  contorno automático, andar em 6 quadros, corrida, respiração, piscar, pulo, queda, voo, sentar,
+  varrer, carregar, tontura e deitado; moto, cachorro e carros redesenhados.
+- Pessoas que se assustam correm alguns passos, se encolhem olhando para V e depois voltam ao
+  lugar; a mesma coisa repetida (voar perto de novo) não reinicia o susto a cada instante.
+- Ciclo de dia e noite com céu, sol, lua, estrelas, nuvens fofas, cidade em cinco camadas de
+  paralaxe (morros, prédios com caixas d'água, antenas e letreiros, viaduto com trânsito,
+  árvores), pássaros e avião, janelas acesas à noite, fachada da padaria com cortinas,
+  floreiras, ar-condicionado e toldo, iluminação dinâmica (lustres, abajur colorido, TV, postes, padaria).
 - Efeitos: tempo parado (dessaturação), rebobinar (ondas e glifos de relógio), raio de
   Percepção, distorção quando a Linha estica e falha visual quando desfia.
 - História dos capítulos 1 e 2 com objetivos, listas de tarefas, diálogos com digitação,
@@ -169,7 +178,8 @@ js/inventory.js   bolsos e catálogo de itens
 js/story.js       diálogos, passos da campanha, sequência "A Linha", missões secundárias
 js/interact.js    objetos interativos fixos e portas
 js/save.js        salvar, carregar, validar e configurações
-js/sprites.js     pixel art procedural (V, pessoas, objetos, móveis, ícones)
+js/characters.js  personagens: quadros com contorno e sombreamento, em cache
+js/sprites.js     pixel art procedural (objetos, móveis, veículos, ícones)
 js/render.js      câmera, céu, paralaxe, blocos, luz e efeitos
 js/ui.js          interface em DOM
 js/main.js        laço com passo fixo, estados, interação, transições e erros
@@ -190,7 +200,7 @@ tests/playthrough.js  teste de ponta a ponta: joga a Etapa 1 inteira no Chromium
 ## Testes
 
 ```bash
-node tests/unit.js                 # 34 testes de física, escada, poderes, objetos, pessoas, bolsos e salvamento
+node tests/unit.js                 # 37 testes de física, escada, voo, poderes, objetos, pessoas, bolsos e salvamento
 ```
 
 O teste de ponta a ponta precisa do Playwright:

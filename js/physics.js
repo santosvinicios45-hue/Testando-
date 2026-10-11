@@ -46,12 +46,14 @@
       if (b.x < 0) { b.x = 0; return this._stopX(b, d); }
       if (b.x + b.w > maxX) { b.x = maxX - b.w; return this._stopX(b, d); }
       const y0 = Math.floor(b.y / TS), y1 = Math.floor((b.y + b.h - EPS) / TS);
-      if (d > 0) {
-        const tx = Math.floor((b.x + b.w - EPS) / TS);
-        for (let ty = y0; ty <= y1; ty++) if (world.isSolid(tx, ty)) { b.x = tx * TS - b.w; return this._stopX(b, d); }
-      } else {
-        const tx = Math.floor(b.x / TS);
-        for (let ty = y0; ty <= y1; ty++) if (world.isSolid(tx, ty)) { b.x = (tx + 1) * TS; return this._stopX(b, d); }
+      const tx = d > 0 ? Math.floor((b.x + b.w - EPS) / TS) : Math.floor(b.x / TS);
+      for (let ty = y0; ty <= y1; ty++) {
+        if (!world.isSolid(tx, ty)) continue;
+        // degrau baixo (quina de laje no fim da escada): sobe até o.stepUp px
+        const rise = b.y + b.h - ty * TS;
+        if (o.stepUp && o.grounded && rise > 0 && rise <= o.stepUp && world.rectFree({ x: b.x, y: b.y - rise, w: b.w, h: b.h })) { b.y -= rise; break; }
+        b.x = d > 0 ? tx * TS - b.w : (tx + 1) * TS;
+        return this._stopX(b, d);
       }
       if (o.solids) {
         for (const s of o.solids) {
@@ -127,6 +129,58 @@
         if (b.x < s.x + s.w && b.x + b.w > s.x && Math.abs(b.y + b.h - s.y) < 0.5) return true;
       }
       return false;
+    },
+
+    /** Superfícies de degrau (px, y) na coluna px entre y0 e y1. */
+    slopeSurfaces(world, px, y0, y1) {
+      const out = [];
+      const tx = Math.floor(px / TS), lx = px - tx * TS;
+      for (let ty = Math.floor(y0 / TS); ty <= Math.floor(y1 / TS); ty++) {
+        const sl = world.def(tx, ty).slope;
+        if (!sl) continue;
+        const top = ty * TS;
+        out.push(sl === 'L' ? top + lx : sl === 'R' ? top + TS - lx : top);
+      }
+      return out;
+    },
+
+    /**
+     * Degraus no estilo Terraria: depois do movimento normal, apoia os pés de b
+     * na superfície inclinada sob o centro do corpo.
+     * o.prevFeet, o.wasGround, o.prefer ('up' | 'down')
+     * Retorna 'snap', 'blocked' (teto impede subir) ou null.
+     */
+    resolveSlope(b, world, o) {
+      if (b.vy < 0) return null;                 // subindo (pulo/voo): atravessa os degraus
+      const px = b.x + b.w / 2, feet = b.y + b.h;
+      const maxUp = 9, maxDown = o.wasGround ? 9 : 0;
+      const cands = [];
+      for (const sy of this.slopeSurfaces(world, px, feet - 20, feet + 12)) {
+        if (b.onGround && sy > feet + 0.5) continue;   // já apoiado em algo mais alto
+        if (b.onGround && o.prefer === 'down' && sy < feet - 0.5) continue; // no chão firme segurando S: espera o degrau de descida
+        let ok;
+        if (o.wasGround) ok = sy >= feet - maxUp && sy <= feet + maxDown;
+        else ok = o.prevFeet <= sy + 2 && feet >= sy - 2;
+        if (ok) cands.push(sy);
+      }
+      if (!cands.length) return null;
+      cands.sort((a, c) => Math.abs(a - feet) - Math.abs(c - feet));
+      let sy = cands[0];
+      for (const c of cands) {
+        if (Math.abs(Math.abs(c - feet) - Math.abs(sy - feet)) > 1.6) continue;
+        if (o.prefer === 'down' ? c > sy : c < sy) sy = c;   // bifurcação: escolhe pelo sentido
+      }
+      if (!world.rectFree({ x: b.x, y: sy - b.h, w: b.w, h: b.h })) {
+        if (sy < feet - 0.01) return 'blocked';
+        // descendo rente à quina de uma laje: apoia no topo do bloco
+        const top = Math.floor(sy / TS) * TS;
+        if (top >= feet - 0.01 && world.rectFree({ x: b.x, y: top - b.h, w: b.w, h: b.h })) sy = top;
+        else return null;
+      }
+      b.y = sy - b.h;
+      if (b.vy > 0) b.impactY = Math.max(b.impactY || 0, b.vy);
+      b.vy = 0; b.onGround = true; b.onSlope = true;
+      return 'snap';
     },
 
     /** Empurra para fora um corpo que, por algum motivo, começou dentro de blocos sólidos. */

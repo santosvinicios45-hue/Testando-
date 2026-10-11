@@ -696,7 +696,7 @@
         st.say([
           O('Nos dias seguintes, os testes ficaram maiores. Se o controle remoto podia atravessar a sala sem percorrer o caminho, por que ele não?'),
           O('E o voo — que da primeira vez terminou no teto — lá fora, sem teto, era outra conversa.'),
-        ], () => g.ui.toast('Voo: no ar, segure Pular (gasta a Linha). Teleporte: tecla 7. Correr: Shift.', 'power'));
+        ], () => g.ui.toast('Voo: pule e aperte Pular de novo no ar; W/S/A/D guiam (gasta a Linha). Teleporte: tecla 7. Correr: Shift.', 'power'));
       }
     },
   };

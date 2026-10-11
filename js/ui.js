@@ -303,7 +303,7 @@
           if (!ps.isUnlocked(id)) { h += '<p class="entry muted">' + (G.POWER_ORDER.indexOf(id) + 1) + '. ???</p>'; continue; }
           h += '<div class="pw"><canvas data-icon="' + id + '" width="16" height="16"></canvas><p class="entry"><b>' + (G.POWER_ORDER.indexOf(id) + 1) + '. ' + esc(P.name) + '</b> — ' + esc(P.desc) + '</p></div>';
         }
-        if (ps.vooLivre) h += '<p class="entry">Voar: no ar, segure Pular. Gasta a Linha e dura pouco. Ainda instável, mas lá fora não tem teto. (extensão original)</p>';
+        if (ps.vooLivre) h += '<p class="entry">Voar: pule e, no ar, aperte Pular de novo. W/S sobem e descem, A/D movem, Shift acelera. Encostar no chão encerra o voo. Gasta a Linha enquanto dura. (extensão original)</p>';
         else if (ps.vooInstavel) h += '<p class="entry muted">Voar: ainda instável. (Bati a cabeça no teto.)</p>';
         h += '<p class="entry muted">Criar sabe fazer: ' + G.CRIAVEIS.filter((c) => ps.criaveis.has(c.id)).map((c) => c.name).join(', ') + '.</p>';
         if (g.story.flags.testemunhas) h += '<p class="entry muted">Pessoas que viram alguma coisa impossível: ' + g.story.flags.testemunhas + '.</p>';

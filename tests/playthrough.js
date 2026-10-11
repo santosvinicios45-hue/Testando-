@@ -98,10 +98,12 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await place(16 * 49, 16 * 30 - 26);
   await pressE(); await drain();
   ok(await step() === 's1_chefe', 'geladeira → avisar o chefe');
-  await place(16 * 54, 16 * 30 - 26);
+  await place(16 * 55, 16 * 30 - 26);
+  { const c = await toClient(16 * 55 + 5, 16 * 30 - 14); await page.mouse.move(c.x, c.y); await wait(60); }
+  ok(await ev(() => { const c = VG.game.findInteraction(); return c && c.id; }) === 'celular', 'celular em foco');
   await pressE(); await drain();
   ok(await step() === 's1_caderno', 'celular → caderno');
-  await place(16 * 54 + 9, 16 * 30 - 26);
+  await place(16 * 55 + 7, 16 * 30 - 26);
   await pressE(); await drain();
   await wait(200);
   ok(await ev(() => VG.game.ui.modal === 'caderno'), 'caderno abre');
@@ -126,7 +128,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await drain();
   ok(await ev(() => VG.game.story.flags.t_controle), 'controle remoto atravessou a sala sem percorrer o caminho');
   // Abajur: acender com E, mudar cor; apagar, mudar cor
-  await place(16 * 56 + 2, 16 * 30 - 26);
+  await place(16 * 58 + 6, 16 * 30 - 26);
   await ev(() => { VG.game.flags.abajurOn = false; });
   const ab = await ev(() => { const it = VG.game.interactables.find((i) => i.id === 'abajur'); return { x: it.x + it.w / 2, y: it.y + it.h / 2 }; });
   await ev(() => { const it = VG.game.interactables.find((i) => i.id === 'abajur'); it.action(VG.game); });
@@ -271,18 +273,16 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await place(16 * 44 + 2, 16 * 38 - 26);
   await pressE();
   ok(await ev(() => VG.game.inventory.has('chave_terraco')), 'pegou a chave do terraço');
-  // sobe a escada de verdade do 3º andar até o alçapão
-  await ev(() => { const g = VG.game, s = g.stairs[3]; g.player.clearPose(); g.player.x = s.x0; g.player.y = s.y0 - 26; g.renderer.snapCamera(); });
-  await wait(150);
-  await page.keyboard.press('KeyW'); await wait(50);
-  ok(await ev(() => !!VG.game.player.stair), 'entrou no último lance da escada com W');
-  await page.keyboard.down('KeyW'); await wait(1600); await page.keyboard.up('KeyW');
-  ok(await ev(() => VG.game.player.stair && VG.game.player.stair.t <= 0.61), 'parou no alçapão trancado');
+  // sobe a escada de degraus do 3º andar até o alçapão (andando, como no Terraria)
+  await place(16 * 36, 16 * 26 - 26);
+  await page.keyboard.down('KeyA'); await wait(1500); await page.keyboard.up('KeyA');
+  ok(await ev(() => { const p = VG.game.player; return p.y + 26 > 16 * 24 + 1 && p.y + 26 < 16 * 26 - 4 && p.onGround; }), 'subiu os degraus e parou embaixo do alçapão trancado');
   await shot('p09b-escada');
   await pressE();
-  ok(await ev(() => !VG.TILES[VG.game.world.get(33, 22)].solid), 'alçapão abre com a chave');
-  await page.keyboard.down('KeyW'); await wait(1500); await page.keyboard.up('KeyW');
-  ok(await ev(() => !VG.game.player.stair && VG.game.player.y + 26 <= 16 * 22 + 1), 'chegou ao telhado pela escada');
+  ok(await ev(() => !VG.TILES[VG.game.world.get(32, 22)].solid), 'alçapão abre com a chave');
+  await page.keyboard.down('KeyA'); await wait(700); await page.keyboard.up('KeyA');
+  await page.keyboard.down('KeyD'); await wait(1400); await page.keyboard.up('KeyD');
+  ok(await ev(() => VG.game.player.y + 26 <= 16 * 22 + 1), 'chegou ao telhado pela escada');
   await place(16 * 40 - 2, 16 * 22 - 26);
   await pressE();
   ok(await ev(() => VG.game.story.side.terraco && VG.game.story.side.terraco.state === 'done'), 'segredo do telhado concluído');
@@ -325,7 +325,9 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await ev(() => VG.game.props.some((p) => p.dynamic && p.type !== 'laranja')), 'criou outra comida');
   // voo livre fora do prédio
   await place(16 * 75, 16 * 38 - 26);
+  await page.keyboard.press('KeyW'); await wait(180);
   await page.keyboard.down('KeyW'); await wait(1000);
+  ok(await ev(() => VG.game.player.hover), 'entrou no voo controlado (Pular de novo no ar)');
   const flyY = await ev(() => VG.game.player.y);
   await page.keyboard.up('KeyW');
   ok(flyY < 16 * 38 - 26 - 70, 'voa lá fora (subiu ' + Math.round(16 * 38 - 26 - flyY) + ' px)');

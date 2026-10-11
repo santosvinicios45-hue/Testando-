@@ -440,7 +440,7 @@
       const fromX = p.cx, fromY = p.cy;
       const dist = U.dist(fromX, fromY, t.r.x + p.w / 2, t.r.y + p.h / 2);
       g.particles.burst(fromX, fromY, 22, { color: '#ff7ad9', speed: 60, life: 0.5 });
-      p.x = t.r.x; p.y = t.r.y; p.vx = 0; p.vy = 0; p.stair = null;
+      p.x = t.r.x; p.y = t.r.y; p.vx = 0; p.vy = 0;
       g.particles.burst(p.cx, p.cy, 22, { color: '#ffd1f2', speed: 45, life: 0.5 });
       g.audio.play('teleport');
       ps.cost(16 + dist / 18);

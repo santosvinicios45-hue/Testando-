@@ -191,7 +191,7 @@
       this.ui.fade(G.weekdayOf(day) + ' — dia ' + day, () => {
         this.clock.day = day; this.clock.min = min;
         const p = this.player;
-        p.clearPose(); p.stair = null; p.dropCarry();
+        p.clearPose(); p.dropCarry();
         // acorda deitado na cama e levanta (sem aparecer em outro lugar)
         const cama = this.decorByType('cama');
         p.setPose('sleep', cama.x + 15, cama.y - 26, 1);
@@ -206,7 +206,7 @@
     }
     teleport(pos, label) {
       this.ui.fade('', () => {
-        this.player.clearPose(); this.player.stair = null; this.player.x = pos.x; this.player.y = pos.y; this.player.vx = 0; this.player.vy = 0;
+        this.player.clearPose(); this.player.x = pos.x; this.player.y = pos.y; this.player.vx = 0; this.player.vy = 0;
         if (this.powers) this.powers.cancelAll();
         this.renderer.snapCamera();
       });
@@ -362,10 +362,6 @@
         if (d < bd) { bd = d; best = Object.assign({ label }, data); }
       };
       for (const q of this.props) if (!q.removed && !(q.hidden && !q.perceived)) consider(q.hitBox(), this.propLabel(q), { kind: 'prop', prop: q, id: q.id }, 12);
-      for (const s of this.stairs) {
-        consider({ x: s.x0 - 4, y: s.y0 - 26, w: 18, h: 26 }, 'Subir a escada (W)', { kind: 'stair', stair: s, top: false, id: s.id + '_b' }, 4);
-        consider({ x: s.x1 - 4, y: s.y1 - 26, w: 18, h: 26 }, 'Descer a escada (S)', { kind: 'stair', stair: s, top: true, id: s.id + '_t' }, 2);
-      }
       for (const pk of this.pickups) if (pk.visible(this)) consider({ x: pk.x - 3, y: pk.y - 3, w: pk.w + 6, h: pk.h + 6 }, pk.item.startsWith('registro') ? 'Ler o papel' : 'Pegar', { kind: 'pickup', pickup: pk, id: pk.id }, 12);
       for (const n of this.npcs) consider({ x: n.x - 6, y: n.y, w: n.w + 12, h: n.h }, this.npcLabel(n), { kind: 'npc', npc: n, id: n.id }, 6);
       for (const it of this.interactables) {
@@ -387,8 +383,6 @@
         if (G.ITEMS[pk.item]) { this.inventory.add(pk.item); this.ui.toast(G.ITEMS[pk.item].name + ' foi para os bolsos.', 'item'); }
         this.audio.play('pickup');
         this.bus.emit('pickup', { item: pk.item, id: pk.id });
-      } else if (c.kind === 'stair') {
-        this.player.enterStair(c.stair, c.top);
       } else if (c.kind === 'npc') {
         this.npcInteract(c.npc);
       } else if (c.kind === 'static') {
@@ -510,7 +504,7 @@
           if (this.inventory.has('pacote')) ch.unshift({ text: 'Chegou isso pro 32.', orig: true, fn: () => { this.inventory.remove('pacote'); this.wallet.add(5); st.progressSide('entrega', 'resolver'); this.say([S('Pro 32? Tá vazio desde março. Deixa que eu resolvo com a transportadora. Toma, pelo trabalho.'), { who: 'narr', orig: true, text: 'Seu Valdir deu cinco reais. V tentou recusar. Não conseguiu.' }]); } });
           if (this.inventory.has('chave_terraco') && !f.chaveDevolvida) ch.unshift({ text: 'Achei a chave do terraço.', orig: true, fn: () => {
             f.chaveDevolvida = true; this.inventory.remove('chave_terraco');
-            for (const x of [32, 33, 34]) if (G.TILES[this.world.get(x, 22)].solid) this.world.set(x, 22, G.T.HATCH_O);
+            for (const [x, y] of G.HATCH_CELLS) { const t = this.world.get(x, y); if (G.TILES[t].solid && G.TILES[t].toggle != null) this.world.set(x, y, G.TILES[t].toggle); }
             this.wallet.add(20);
             this.say([S('Não acredito! Onde tava? ... Atrás das caixas? Eu falei! Vou deixar o alçapão destrancado de vez. E isso aqui é pra você, não discute.'), { who: 'narr', orig: true, text: 'Vinte reais e um tapinha no ombro.' }]);
           } });

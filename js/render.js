@@ -61,6 +61,21 @@
         else { c.save(); c.globalAlpha = 0.3; R(c, x + 10, y + (top ? 2 : 0), 3, TS, '#9fd3f0'); c.restore(); }
         break;
       }
+      case T.STAIR_L: case T.STAIR_R: case T.HATCH_SO: {
+        const left = t === T.STAIR_L;
+        for (let i = 0; i < 4; i++) {
+          const sx = x + (left ? i : 3 - i) * 4, sy = y + i * 4;   // degrau i: 4 px de piso, 4 px de espelho
+          R(c, sx, sy, 4, 10, '#6d4a2a');
+          R(c, sx, sy, 4, 2, '#b07a44'); R(c, sx, sy, 4, 1, '#cf9a5e');
+          R(c, sx, sy + 2, 4, 1, '#5a3b1f');
+        }
+        break;
+      }
+      case T.STAIR_F:
+        R(c, x, y, TS, 6, '#6d4a2a'); R(c, x, y, TS, 2, '#b07a44'); R(c, x, y, TS, 1, '#cf9a5e'); R(c, x, y + 6, TS, 1, '#4b311a');
+        R(c, x + 1, y + 7, 2, 9, '#4b311a');
+        break;
+      case T.HATCH_SC:
       case T.HATCH_C: R(c, x, y, TS, TS, '#5d656c'); R(c, x, y, TS, 2, '#7a838a'); R(c, x + 2, y + 6, 12, 1, '#454c52'); R(c, x + 7, y + 10, 2, 2, '#c9a24a'); break;
       case T.HATCH_O: R(c, x, y, 2, TS, '#5d656c'); R(c, x + 14, y, 2, TS, '#5d656c'); R(c, x, y, TS, 3, '#6d757c'); break;
       case T.RAIL: R(c, x, y + 1, TS, 2, '#2f3439'); for (let i = 1; i < TS; i += 4) R(c, x + i, y + 3, 1, 13, '#2f3439'); break;
@@ -71,13 +86,41 @@
       case T.ROOF: R(c, x, y, TS, TS, '#808388'); R(c, x, y, TS, 3, '#4a4a4f'); R(c, x, y + 15, TS, 1, '#6b6e72'); break;
       case T.GRAVEL: speck('#7d7466', '#685f52', '#958b7c', 12); if (openAbove) R(c, x, y, TS, 1, '#9a9081'); break;
       case T.FACADE: {
-        R(c, x, y, TS, TS, '#c9a27e'); R(c, x, y, TS, 1, '#d4ae8b');
-        const wx = (tx - 103) % 4, wy = (ty - 26) % 4;
+        const wx = (tx - 103) % 4, wy = (ty - 26) % 4, mod = Math.floor((tx - 103) / 4) * 7 + Math.floor((ty - 26) / 4);
+        R(c, x, y, TS, TS, '#dcb68e');
+        for (let i = 0; i < 5; i++) R(c, x + Math.floor(h(i) * 15), y + Math.floor(h(i + 9) * 15), 2, 1, h(i + 3) > 0.5 ? '#e6c39d' : '#cfa880');
+        if (wy === 0) { R(c, x, y, TS, 3, '#f1e2c8'); R(c, x, y + 3, TS, 1, '#b48f68'); }
         if ((wx === 1 || wx === 2) && (wy === 1 || wy === 2)) {
-          R(c, x, y, TS, TS, '#7a8e9c');
-          if (wx === 1) R(c, x, y, 2, TS, '#efe6d8'); if (wx === 2) R(c, x + 14, y, 2, TS, '#efe6d8');
-          if (wy === 1) R(c, x, y, TS, 2, '#efe6d8'); if (wy === 2) R(c, x, y + 14, TS, 2, '#efe6d8');
-          R(c, x + (wx === 1 ? 4 : 2), y + (wy === 1 ? 4 : 2), 3, 5, 'rgba(255,255,255,0.35)');
+          const L = wx === 1, Tp = wy === 1;
+          // moldura
+          R(c, x, y, TS, TS, '#f4ecdc');
+          const gx = x + (L ? 3 : 0), gy = y + (Tp ? 3 : 0), gw = TS - 3, gh = TS - 3;
+          R(c, gx, gy, gw, gh, Tp ? '#86a9c0' : '#6d8ea6');
+          if (Tp) R(c, gx, gy, gw, 3, '#a6c4d6');
+          // reflexo diagonal
+          for (let k = 0; k < 6; k++) R(c, gx + (L ? 3 : 1) + k, gy + (Tp ? 9 : 6) - k, 1, 1, 'rgba(255,255,255,0.45)');
+          // cortina (cor por janela)
+          const cur = ['#c0504d', '#e9d8a6', '#6a8caf', '#9b7bb5', '#7fa86b'][Math.floor(U.hash(mod, 3, 5) * 5)];
+          if (U.hash(mod, 1, 5) > 0.35) {
+            const cx0 = L ? gx : gx + gw - 5;
+            R(c, cx0, gy, 5, gh, cur); R(c, cx0 + (L ? 3 : 1), gy, 1, gh, G.Characters.dark(cur, 0.25));
+            if (Tp) R(c, gx, gy, gw, 2, G.Characters.dark(cur, 0.15));
+          }
+          // caixilho em cruz
+          R(c, L ? x + TS - 1 : x, y, 1, TS, '#f4ecdc'); R(c, x, Tp ? y + TS - 1 : y, TS, 1, '#f4ecdc');
+        }
+        if (wy === 3 && (wx === 1 || wx === 2)) {
+          R(c, x - (wx === 1 ? 1 : 0), y, TS + 1, 2, '#f7f0e2'); R(c, x, y + 2, TS, 1, '#b48f68');
+          if (U.hash(Math.floor((tx - 103) / 4), ty, 8) > 0.45) {
+            R(c, x + 1, y + 2, TS - 2, 5, '#8e5a3a'); R(c, x + 1, y + 2, TS - 2, 1, '#a86e4a');
+            for (let k = 0; k < 6; k++) { R(c, x + 2 + k * 2, y - 1 + (k % 2), 2, 3, '#4f9a3a'); if (k % 2 === 0) R(c, x + 2 + k * 2, y - 2, 2, 2, ['#e74c3c', '#f1c40f', '#ecf0f1'][Math.floor(U.hash(tx, k, 4) * 3)]); }
+          }
+        }
+        if (wy === 2 && wx === 3 && U.hash(Math.floor((tx - 103) / 4), ty, 9) > 0.5) {
+          // ar-condicionado
+          R(c, x + 3, y + 6, 11, 8, '#e3e5e2'); R(c, x + 3, y + 6, 11, 1, '#f7f8f6'); R(c, x + 13, y + 7, 1, 7, '#b6bab6');
+          for (let k = 0; k < 3; k++) R(c, x + 5, y + 8 + k * 2, 7, 1, '#9da29e');
+          R(c, x + 6, y + 14, 1, 2, '#7d8ea0');
         }
         break;
       }
@@ -161,24 +204,126 @@
     }
 
     buildSkyline() {
-      const make = (seed, hMin, hMax, colDay, colNight, lit) => {
-        const W = 1440, H = 200;
+      const W = 1440;
+      const mix = G.Characters.mix;
+      const hs = (i, seed, k) => U.hash(i, seed, k);
+      /** Um prédio de fundo em (x, base) com largura bw e altura bh. */
+      const building = (xd, xn, x, base, bw, bh, i, seed, o) => {
+        const top = base - bh;
+        const pal = o.palette[Math.floor(hs(i, seed, 3) * o.palette.length)];
+        const body = mix(pal, o.haze, o.hazeK), side = mix(body, '#1d2333', 0.18), lite = mix(body, '#ffffff', 0.18);
+        const nb = mix(pal, '#0b1022', 0.78), nside = mix(nb, '#000000', 0.25);
+        const kind = hs(i, seed, 4);
+        // corpo, lateral na sombra e quina iluminada
+        R(xd, x, top, bw, bh, body); R(xd, x + bw - 3, top, 3, bh, side); R(xd, x, top, 1, bh, lite);
+        R(xn, x, top, bw, bh, nb); R(xn, x + bw - 3, top, 3, bh, nside);
+        // platibanda
+        R(xd, x - 1, top, bw + 2, 2, mix(body, '#ffffff', 0.25)); R(xn, x - 1, top, bw + 2, 2, mix(nb, '#ffffff', 0.08));
+        // janelas
+        const ww = o.win, gap = o.win + 2, rowH = o.win + 4;
+        const cols = Math.max(1, Math.floor((bw - 6) / gap));
+        const ox = x + Math.floor((bw - 3 - cols * gap) / 2) + 1;
+        const winD = mix('#8fb3c9', o.haze, o.hazeK * 0.8), winF = mix(body, '#000', 0.12);
+        for (let wy = top + 5, r = 0; wy < base - 6; wy += rowH, r++) {
+          if (kind > 0.66) { // prédio com faixas horizontais de janelas (comercial)
+            R(xd, x + 2, wy, bw - 6, ww, winD); R(xd, x + 2, wy + ww, bw - 6, 1, winF);
+            for (let wx = 0; wx < cols; wx++) if (hs(wx + i * 7, r, seed) < o.lit) R(xn, ox + wx * gap, wy, ww + 1, ww, hs(wx, r + i, 99) > 0.25 ? '#ffd98a' : '#bfe0ff');
+            continue;
+          }
+          for (let wx = 0; wx < cols; wx++) {
+            const X = ox + wx * gap;
+            R(xd, X, wy, ww, ww, winD); R(xd, X, wy + ww, ww, 1, winF);
+            if (kind < 0.25 && ww >= 3) R(xd, X - 1, wy + ww, ww + 2, 1, mix(body, '#fff', 0.3)); // varandinhas
+            if (hs(X, wy, seed) < o.lit) R(xn, X, wy, ww, ww, hs(wy, X, seed) > 0.3 ? '#ffd98a' : '#bfe0ff');
+          }
+        }
+        // topo: caixa d'água, antena, ar-condicionado ou letreiro
+        const roof = hs(i, seed, 5);
+        const rc = mix('#8a9099', o.haze, o.hazeK), rn = mix('#30364a', '#000', 0.2);
+        if (roof < 0.35) { const tw = Math.min(14, bw - 6); R(xd, x + 3, top - 7, tw, 7, rc); R(xd, x + 3, top - 7, tw, 1, mix(rc, '#fff', 0.3)); R(xn, x + 3, top - 7, tw, 7, rn); }
+        else if (roof < 0.55) { R(xd, x + bw / 2, top - 14, 1, 14, rc); R(xd, x + bw / 2 - 3, top - 10, 7, 1, rc); R(xn, x + bw / 2, top - 14, 1, 14, rn); R(xn, x + bw / 2, top - 15, 1, 1, '#ff5050'); }
+        else if (roof < 0.7) { for (let k = 0; k < 3; k++) { R(xd, x + 3 + k * 6, top - 4, 4, 4, rc); R(xn, x + 3 + k * 6, top - 4, 4, 4, rn); } }
+        else if (roof < 0.8 && o.signs && bw > 34) {
+          const sc = o.signs[Math.floor(hs(i, seed, 6) * o.signs.length)];
+          R(xd, x + 4, top - 12, bw - 10, 9, mix(sc, o.haze, o.hazeK * 0.6)); R(xd, x + 6, top - 9, bw - 14, 2, mix('#ffffff', o.haze, o.hazeK * 0.6));
+          R(xd, x + 6, top - 3, 1, 3, rc); R(xd, x + bw - 8, top - 3, 1, 3, rc);
+          R(xn, x + 4, top - 12, bw - 10, 9, sc); R(xn, x + 6, top - 9, bw - 14, 2, '#ffffff');
+        }
+      };
+      const layer = (seed, H, base, hMin, hMax, wMin, wMax, o) => {
         const [cd, xd] = mkCanvas(W, H); const [cn, xn] = mkCanvas(W, H);
+        if (o.ground) { R(xd, 0, base, W, H - base, mix(o.ground, o.haze, o.hazeK)); R(xn, 0, base, W, H - base, mix(o.ground, '#05070f', 0.8)); }
         let x = 0, i = 0;
         while (x < W) {
-          const bw = 24 + Math.floor(U.hash(i, seed, 1) * 46), bh = hMin + Math.floor(U.hash(i, seed, 2) * (hMax - hMin));
-          R(xd, x, H - bh, bw - 2, bh, colDay); R(xn, x, H - bh, bw - 2, bh, colNight);
-          for (let wy = H - bh + 5; wy < H - 6; wy += 7) for (let wx = x + 3; wx < x + bw - 6; wx += 5) {
-            R(xd, wx, wy, 2, 3, 'rgba(255,255,255,0.12)');
-            if (U.hash(wx, wy, seed) < lit) R(xn, wx, wy, 2, 3, U.hash(wy, wx, seed) > 0.3 ? '#ffd98a' : '#bfe0ff');
-          }
-          if (U.hash(i, seed, 5) > 0.75) { R(xd, x + bw / 2 - 1, H - bh - 8, 1, 8, colDay); R(xn, x + bw / 2 - 1, H - bh - 8, 1, 8, colNight); R(xn, x + bw / 2 - 1, H - bh - 9, 1, 1, '#ff4d4d'); }
-          x += bw; i++;
+          const bw = Math.min(W - x, wMin + Math.floor(hs(i, seed, 1) * (wMax - wMin)));
+          const bh = hMin + Math.floor(Math.pow(hs(i, seed, 2), o.pow || 1) * (hMax - hMin));
+          if (bw >= 12) building(xd, xn, x + 1, base, bw - 2, bh, i, seed, o);
+          x += bw + (hs(i, seed, 8) < 0.3 ? 3 : 0); i++;
         }
         return { day: cd, night: cn, W, H };
       };
-      this.farSky = make(11, 50, 150, '#8fa7bd', '#151a33', 0.25);
-      this.midSky = make(23, 30, 110, '#6f8aa3', '#0f1428', 0.35);
+      // morros ao longe
+      {
+        const H = 120;
+        const [cd, xd] = mkCanvas(W, H); const [cn, xn] = mkCanvas(W, H);
+        for (let x = 0; x < W; x++) {
+          const t = x / W * Math.PI * 2;
+          const h1 = 34 + Math.sin(t * 2) * 16 + Math.sin(t * 5 + 1) * 8 + Math.sin(t * 11) * 3;
+          const h2 = 20 + Math.sin(t * 3 + 2) * 10 + Math.sin(t * 7) * 4;
+          R(xd, x, H - h1, 1, h1, '#a9bfd0'); R(xn, x, H - h1, 1, h1, '#141b30');
+          R(xd, x, H - h2, 1, h2, '#9ab3c6'); R(xn, x, H - h2, 1, h2, '#10172a');
+        }
+        this.hills = { day: cd, night: cn, W, H };
+      }
+      this.farSky = layer(11, 190, 190, 60, 175, 22, 48, { palette: ['#8fa3b8', '#9aa8b8', '#8698ad', '#a3b0bf'], haze: '#b9cad8', hazeK: 0.55, win: 2, lit: 0.22, pow: 1.4 });
+      this.midSky = layer(23, 150, 150, 34, 128, 28, 64, { palette: ['#d8c3a5', '#c98b6b', '#9fb2b5', '#e0d6c3', '#b8a1c9', '#c9b37a', '#a7b8a0', '#d9a7a0'], haze: '#c3d3df', hazeK: 0.28, win: 3, lit: 0.34, signs: ['#e74c3c', '#2e86de', '#27ae60', '#f39c12'] });
+      this.nearSky = layer(37, 110, 110, 24, 86, 30, 70, { palette: ['#e7d2b0', '#d98e6a', '#b8c7c9', '#f0e3c8', '#c2a78f', '#d6b55c', '#9fb39a', '#e2a59b', '#8fa9c4'], haze: '#c3d3df', hazeK: 0.18, win: 3, lit: 0.45, signs: ['#e74c3c', '#2e86de', '#8e44ad', '#16a085'], ground: '#5d6b5a' });
+      // viaduto com pilares (o trânsito é desenhado por cima, animado)
+      {
+        const H = 40;
+        const [cd, xd] = mkCanvas(W, H); const [cn, xn] = mkCanvas(W, H);
+        R(xd, 0, 6, W, 5, '#9aa3ab'); R(xd, 0, 6, W, 1, '#c3c9ce'); R(xd, 0, 11, W, 2, '#6f7880'); R(xd, 0, 3, W, 1, '#7d868e');
+        R(xn, 0, 6, W, 5, '#1b2132'); R(xn, 0, 11, W, 2, '#121725'); R(xn, 0, 3, W, 1, '#2a3146');
+        for (let x = 0; x < W; x += 4) { R(xd, x, 3, 1, 3, '#7d868e'); R(xn, x, 3, 1, 3, '#2a3146'); }
+        for (let x = 30; x < W; x += 120) { R(xd, x, 13, 8, H - 13, '#8c959d'); R(xd, x + 6, 13, 2, H - 13, '#737c84'); R(xn, x, 13, 8, H - 13, '#171c2b'); }
+        for (let x = 60; x < W; x += 90) { R(xd, x, -1 + 0, 1, 3, '#555'); R(xn, x, 0, 1, 3, '#333'); }
+        this.viaduct = { day: cd, night: cn, W, H };
+      }
+      // árvores próximas (silhueta com copas)
+      {
+        const H = 50;
+        const [cd, xd] = mkCanvas(W, H); const [cn, xn] = mkCanvas(W, H);
+        for (let i = 0, x = 10; x < W; i++) {
+          const r = 7 + Math.floor(hs(i, 5, 1) * 7), th = 8 + Math.floor(hs(i, 5, 2) * 10);
+          const cx = x + r;
+          R(xd, cx - 1, H - th, 2, th, '#5a4630'); R(xn, cx - 1, H - th, 2, th, '#0b0e14');
+          const cols = ['#4f8f45', '#5d9e4c', '#3f7a3d'];
+          for (let k = 0; k < 5; k++) {
+            const ox = Math.round((hs(i, k, 3) - 0.5) * r * 1.2), oy = Math.round(-hs(i, k, 4) * r * 0.8);
+            const rr = Math.round(r * (0.55 + hs(i, k, 5) * 0.4));
+            for (let yy = -rr; yy <= rr; yy++) { const ww = Math.round(Math.sqrt(rr * rr - yy * yy)); R(xd, cx + ox - ww, H - th - r + oy + yy, ww * 2, 1, cols[k % 3]); R(xn, cx + ox - ww, H - th - r + oy + yy, ww * 2, 1, '#0d1410'); }
+          }
+          R(xd, cx - r / 2, H - th - r * 1.6, r / 2, 2, '#77b55e');
+          x += r * 2 + 18 + Math.floor(hs(i, 5, 6) * 60);
+        }
+        this.trees = { day: cd, night: cn, W, H };
+      }
+      // nuvens fofas pré-desenhadas
+      this.cloudSprites = [];
+      for (let k = 0; k < 4; k++) {
+        const cw = 40 + k * 12, ch = 18;
+        const [cv, cx] = mkCanvas(cw, ch);
+        for (let j = 0; j < 6; j++) {
+          const r = 4 + Math.floor(U.hash(k, j, 31) * 5), px = 6 + Math.floor(U.hash(k, j, 32) * (cw - 14)), py = ch - r - 1 - (j % 3 === 1 ? 3 : 0);
+          for (let yy = -r; yy <= r; yy++) { const ww = Math.round(Math.sqrt(r * r - yy * yy)); R(cx, px - ww, py + yy, ww * 2, 1, '#ffffff'); }
+        }
+        cx.globalCompositeOperation = 'source-atop'; R(cx, 0, ch - 5, cw, 5, '#dfe8f2'); R(cx, 0, 0, cw, 4, '#ffffff');
+        this.cloudSprites.push(cv);
+      }
+      // vida no céu e no viaduto
+      this.traffic = [];
+      for (let i = 0; i < 9; i++) this.traffic.push({ x: Math.random() * W, dir: i % 2 ? 1 : -1, v: 26 + Math.random() * 22, col: ['#e74c3c', '#ecf0f1', '#f1c40f', '#3498db', '#2c3e50', '#95a5a6'][i % 6], bus: i === 3 });
+      this.birds = null; this.birdT = 6; this.plane = null; this.planeT = 20;
     }
 
     initWorld(world) {
@@ -250,6 +395,16 @@
       for (const r of this.ripples) r.t += dt;
       this.ripples = this.ripples.filter((r) => r.t < 0.9);
       for (const c of this.clouds) { c.x += c.s * dt; if (c.x > 1500) c.x = -80; }
+      for (const v of this.traffic) { v.x += v.dir * v.v * dt; if (v.x > 1440) v.x -= 1440; if (v.x < 0) v.x += 1440; }
+      this.birdT -= dt;
+      if (!this.birds && this.birdT <= 0) {
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        this.birds = { x: dir > 0 ? -30 : VW + 30, y: 30 + Math.random() * 60, dir, n: 4 + Math.floor(Math.random() * 5), t: 0 };
+      }
+      if (this.birds) { const b = this.birds; b.t += dt; b.x += b.dir * 28 * dt; b.y += Math.sin(b.t) * 3 * dt; if (b.x < -60 || b.x > VW + 60) { this.birds = null; this.birdT = 10 + Math.random() * 20; } }
+      this.planeT -= dt;
+      if (!this.plane && this.planeT <= 0) this.plane = { x: -20, y: 14 + Math.random() * 30 };
+      if (this.plane) { this.plane.x += 14 * dt; if (this.plane.x > VW + 30) { this.plane = null; this.planeT = 40 + Math.random() * 40; } }
     }
 
     /* =================== desenho do quadro =================== */
@@ -271,8 +426,14 @@
       this.drawSkyBodies(c, min, night);
       // paralaxe
       const groundY = 38 * TS - cam.y;
-      this.drawLayer(c, this.farSky, 0.12, groundY - 30, night);
-      this.drawLayer(c, this.midSky, 0.3, groundY - 6, night);
+      this.drawLayer(c, this.hills, 0.04, groundY - 70, night);
+      this.drawLayer(c, this.farSky, 0.1, groundY - 34, night);
+      this.drawSkyLife(c, night);
+      this.drawLayer(c, this.midSky, 0.22, groundY - 14, night);
+      this.drawLayer(c, this.viaduct, 0.32, groundY - 18, night);
+      this.drawTraffic(c, 0.32, groundY - 18 - 40 + 6, night);
+      this.drawLayer(c, this.nearSky, 0.42, groundY + 4, night);
+      this.drawLayer(c, this.trees, 0.55, groundY, night);
 
       // o que há atrás das paredes (só aparece com Percepção)
       if (perc) {
@@ -297,7 +458,6 @@
       // blocos da frente
       this.drawWorldLayer(c, this.fgCv, perc, 0.35);
       // escada do prédio
-      this.drawStairs(c, cam);
 
       // pickups
       for (const pk of g.pickups) {
@@ -382,13 +542,49 @@
         c.fillStyle = 'rgba(160,170,190,0.6)'; R(c, x - 2, y - 2, 2, 2, 'rgba(160,170,190,0.6)'); R(c, x + 2, y + 1, 1, 1, 'rgba(160,170,190,0.6)');
       }
       // nuvens
-      c.save(); c.globalAlpha = 0.55 - night * 0.35;
-      for (const cl of this.clouds) {
+      c.save(); c.globalAlpha = 0.8 - night * 0.55;
+      if (night > 0.5) c.filter = 'brightness(0.35)';
+      this.clouds.forEach((cl, i) => {
         const x = Math.round(cl.x - this.cam.x * 0.05) % 1500 - 60;
-        c.fillStyle = night > 0.5 ? '#3a4366' : '#ffffff';
-        R(c, x, cl.y, cl.w, 6, c.fillStyle); R(c, x + 6, cl.y - 4, cl.w * 0.5, 5, c.fillStyle); R(c, x + cl.w * 0.4, cl.y - 6, cl.w * 0.35, 7, c.fillStyle);
-      }
+        c.drawImage(this.cloudSprites[i % this.cloudSprites.length], x, Math.round(cl.y));
+      });
+      c.filter = 'none';
       c.restore();
+    }
+
+    /** Pássaros em bando e um avião cruzando o céu de vez em quando. */
+    drawSkyLife(c, night) {
+      const b = this.birds;
+      if (b && night < 0.8) {
+        for (let i = 0; i < b.n; i++) {
+          const x = Math.round(b.x - b.dir * (i * 7 + (i % 2) * 3)), y = Math.round(b.y + (i % 2 ? 3 : 0) + Math.abs(i - b.n / 2) * 2);
+          const up = Math.sin(b.t * 10 + i) > 0;
+          R(c, x - 2, y + (up ? -1 : 0), 2, 1, '#2d3340'); R(c, x, y, 1, 1, '#2d3340'); R(c, x + 1, y + (up ? -1 : 0), 2, 1, '#2d3340');
+        }
+      }
+      const p = this.plane;
+      if (p) {
+        const x = Math.round(p.x), y = Math.round(p.y);
+        R(c, x, y, 9, 2, night > 0.5 ? '#3a4260' : '#e9edf2'); R(c, x + 3, y - 2, 2, 2, night > 0.5 ? '#3a4260' : '#d5dbe2'); R(c, x + 4, y + 2, 3, 1, night > 0.5 ? '#3a4260' : '#d5dbe2');
+        if (Math.sin(this.time * 6) > 0.4) R(c, x + 9, y, 1, 1, '#ff5050');
+        if (night < 0.5) { c.save(); c.globalAlpha = 0.35; R(c, x - 40, y + 1, 40, 1, '#ffffff'); c.restore(); }
+      }
+    }
+
+    /** Carros e ônibus passando no viaduto ao fundo (faróis à noite). */
+    drawTraffic(c, f, y, night) {
+      const off = -((this.cam.x * f) % 1440);
+      for (const v of this.traffic) {
+        for (let k = -1; k < 2; k++) {
+          const x = Math.round(off + v.x + k * 1440);
+          if (x < -12 || x > VW + 12) continue;
+          const len = v.bus ? 11 : 6, yy = Math.round(y) + (v.dir > 0 ? 0 : 1);
+          const col = night > 0.5 ? G.Characters.mix(v.col, '#0b1022', 0.6) : v.col;
+          R(c, x, yy - 3, len, 3, col); R(c, x + 1, yy - 4, len - 2, 1, col);
+          if (v.bus) for (let i = 1; i < len - 1; i += 2) R(c, x + i, yy - 3, 1, 1, night > 0.5 ? '#ffd98a' : '#9fc3d6');
+          if (night > 0.3) { R(c, v.dir > 0 ? x + len : x - 1, yy - 2, 1, 1, '#fff2b0'); R(c, v.dir > 0 ? x - 1 : x + len, yy - 2, 1, 1, '#ff4040'); }
+        }
+      }
     }
 
     drawLayer(c, L, f, baseY, night) {
@@ -459,20 +655,6 @@
       }
     }
 
-    /** Lances da escada: degraus de madeira desenhados sobre as lajes. */
-    drawStairs(c, cam) {
-      for (const s of this.g.stairs || []) {
-        const n = 8, dx = (s.x1 - s.x0) / n, dy = (s.y0 - s.y1) / n;
-        for (let i = 0; i < n; i++) {
-          const sx = s.x0 + dx * i + (dx > 0 ? 0 : dx) + 5 - cam.x, sy = s.y0 - dy * (i + 1) - cam.y;
-          R(c, sx - 3, sy, Math.abs(dx) + 6, 2, '#a87444'); R(c, sx - 3, sy + 2, Math.abs(dx) + 6, dy - 2, 'rgba(70,45,24,0.85)');
-        }
-        // corrimão
-        c.save(); c.strokeStyle = '#5c3b1c'; c.lineWidth = 1; c.beginPath();
-        c.moveTo(s.x0 + 5 - cam.x, s.y0 - 14 - cam.y); c.lineTo(s.x1 + 5 - cam.x, s.y1 - 14 - cam.y); c.stroke(); c.restore();
-      }
-    }
-
     drawFacadeLights(c, cam, night) {
       c.save(); c.globalAlpha = Math.min(1, night * 1.2);
       for (let ty = 26; ty <= 33; ty++) for (let tx = 103; tx <= 123; tx++) {
@@ -513,9 +695,7 @@
           break;
         case 'crianca': {
           const jump = n.anim > 0.6 ? 2 : 0;
-          c.save(); c.translate(x + 5, y + n.h - jump); c.scale(0.7, 0.7);
-          G.Sprites.human(c, -5, -26, { facing: n.facing, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#c68e64', shirt: '#f39c12', shirtS: '#d68910', pants: '#2e86c1', pantsS: '#21618c', hair: '#3b2416' }), seed: 7, gesture: n.anim > 0.3 ? 4 : 0 });
-          c.restore();
+          G.Characters.draw(c, x + 5, y + n.h - jump, { kid: true, facing: n.facing, state: n.moving ? 'walk' : 'idle', t: n.moving ? n.anim / 9 : n.t, pal: Object.assign({}, base, { skin: '#c68e64', shirt: '#f39c12', pants: '#2e86c1', hair: '#3b2416', shoe: '#e9e3d6' }), seed: 7, gesture: n.anim > 0.3 && !n.moving ? 4 : 0 });
           break;
         }
         case 'porteiro':
@@ -546,7 +726,7 @@
         c.save(); c.globalAlpha = 0.18 * Math.max(p.powerGlow, g.powers.held ? 1 : 0);
         c.fillStyle = P ? P.color : '#9fd8ff'; c.beginPath(); c.arc(x + 5, y + 12, 16, 0, Math.PI * 2); c.fill(); c.restore();
       }
-      G.Sprites.human(c, x, y, { facing: p.facing, state: p.running && p.state === 'walk' ? 'walk' : p.state, t: p.anim * (p.running ? 1.5 : 1), landT: p.landT, aim, carrying: !!p.carry, glow: p.powerGlow, glowColor: P ? P.color : '#9fd8ff', flash: g.powers.unravelT > 0 ? g.powers.unravelT : 0 });
+      G.Sprites.human(c, x, y, { facing: p.facing, state: p.state, run: p.running, t: p.anim, landT: p.landT, aim, carrying: !!p.carry, glow: p.powerGlow, glowColor: P ? P.color : '#9fd8ff', flash: g.powers.unravelT > 0 ? g.powers.unravelT : 0 });
       if (p.state === 'stun' || this.starsT > 0) {
         for (let i = 0; i < 3; i++) {
           const a = this.time * 6 + i * 2.1;
