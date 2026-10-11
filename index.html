@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V: O Arquiteto da Realidade</title>
+  <meta name="description" content="Sandbox 2D baseado no romance V — O Homem Que Acordou Grande Demais. Etapa 1: o apartamento e o copo que parou no ar.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=VT323&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <canvas id="game" width="480" height="270" aria-label="Tela do jogo"></canvas>
+
+      <div id="ui">
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+          <div class="hud-card">
+            <div class="hud-row"><span class="hud-label">A Linha</span><span id="linha-val" class="hud-small"></span></div>
+            <div id="linha" title="Tensão da Linha da realidade. Cada poder puxa o fio; parado, ele relaxa. Se passar do limite, desfia."><div id="linha-fill"></div><div id="linha-knots"></div></div>
+            <div class="hud-row"><span id="emotion" class="emotion"></span><span id="compreensao" class="hud-small"></span></div>
+          </div>
+          <div class="hud-card hud-clock">
+            <div id="clock"></div>
+            <div id="place"></div>
+          </div>
+          <div id="fps" class="hidden"></div>
+        </div>
+
+        <div id="objective" class="hidden">
+          <div id="obj-chapter"></div>
+          <div id="obj-text"></div>
+          <ul id="obj-list"></ul>
+          <div id="obj-hint">J — caderno · I — bolsos · Esc — pausa</div>
+        </div>
+
+        <div id="hotbar" class="hidden"></div>
+        <div id="prompt" class="hidden"></div>
+        <div id="bubble" class="hidden"></div>
+        <div id="toasts"></div>
+
+        <div id="dialogue" class="hidden">
+          <div id="dlg-who"></div>
+          <div id="dlg-text"></div>
+          <div id="dlg-choices"></div>
+          <div id="dlg-hint">E / Espaço / clique — continuar</div>
+        </div>
+
+        <div id="chapter-card" class="hidden"><div class="cc-title"></div><div class="cc-sub"></div></div>
+        <div id="fade" class="hidden"><div id="fade-caption"></div></div>
+
+        <!-- MENU PRINCIPAL -->
+        <div id="menu-main" class="screen hidden">
+          <div class="title-block">
+            <div class="title-v">V</div>
+            <div class="title-name">O Arquiteto da Realidade</div>
+            <div class="title-sub">baseado no romance <em>V — O Homem Que Acordou Grande Demais</em></div>
+          </div>
+          <div class="menu-buttons">
+            <button data-act="continue" id="btn-continue">Continuar</button>
+            <button data-act="new">Novo jogo</button>
+            <button data-act="load">Carregar</button>
+            <button data-act="settings">Configurações</button>
+            <button data-act="controls">Controles</button>
+            <button data-act="about">Sobre esta versão</button>
+          </div>
+          <div class="epigraph">“Eu prefiro carregar a culpa de ter feito,<br>do que a culpa de não ter feito nada.” — V</div>
+          <div class="version" id="version"></div>
+        </div>
+
+        <!-- PAUSA -->
+        <div id="menu-pause" class="screen dim hidden">
+          <div class="panel small">
+            <h2>Pausa</h2>
+            <div class="menu-buttons">
+              <button data-act="resume">Continuar</button>
+              <button data-act="save">Salvar</button>
+              <button data-act="load">Carregar</button>
+              <button data-act="caderno">Caderno</button>
+              <button data-act="settings">Configurações</button>
+              <button data-act="controls">Controles</button>
+              <button data-act="quit">Menu principal</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SAVES -->
+        <div id="panel-saves" class="screen dim hidden">
+          <div class="panel">
+            <h2 id="saves-title">Salvar</h2>
+            <div id="saves-list"></div>
+            <div class="panel-foot"><button data-act="back">Voltar</button></div>
+          </div>
+        </div>
+
+        <!-- CONFIGURAÇÕES -->
+        <div id="panel-settings" class="screen dim hidden">
+          <div class="panel">
+            <h2>Configurações</h2>
+            <div class="settings-grid">
+              <label>Volume <input type="range" id="set-volume" min="0" max="1" step="0.05"></label>
+              <label><input type="checkbox" id="set-shake"> Tremor de tela</label>
+              <label><input type="checkbox" id="set-flashes"> Reduzir flashes e distorções</label>
+              <label><input type="checkbox" id="set-fps"> Mostrar FPS</label>
+              <label>Escala da tela
+                <select id="set-scale"><option value="integer">Pixels inteiros (nítido)</option><option value="fit">Preencher a janela</option></select>
+              </label>
+            </div>
+            <h3>Teclas (clique para remapear)</h3>
+            <div id="bindings"></div>
+            <div class="panel-foot">
+              <button data-act="reset-keys">Restaurar teclas padrão</button>
+              <button data-act="back">Voltar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTROLES -->
+        <div id="panel-controls" class="screen dim hidden">
+          <div class="panel">
+            <h2>Controles</h2>
+            <div id="controls-list"></div>
+            <div class="panel-foot"><button data-act="back">Voltar</button></div>
+          </div>
+        </div>
+
+        <!-- SOBRE -->
+        <div id="panel-about" class="screen dim hidden">
+          <div class="panel">
+            <h2>Sobre esta versão</h2>
+            <div class="about-text" id="about-text"></div>
+            <div class="panel-foot"><button data-act="back">Voltar</button></div>
+          </div>
+        </div>
+
+        <!-- CADERNO -->
+        <div id="caderno" class="screen dim hidden">
+          <div class="notebook">
+            <div class="nb-tabs">
+              <button data-tab="descobertas">Coisas que eu consigo fazer</button>
+              <button data-tab="registros">Registros</button>
+              <button data-tab="missoes">Missões</button>
+              <button data-tab="poderes">Poderes e a Linha</button>
+            </div>
+            <div class="nb-page" id="nb-page"></div>
+            <div class="nb-foot"><button data-act="close-panel">Fechar (J)</button></div>
+          </div>
+        </div>
+
+        <!-- BOLSOS -->
+        <div id="bolsos" class="screen dim hidden">
+          <div class="panel">
+            <h2>Bolsos</h2>
+            <div id="inv-grid"></div>
+            <div id="inv-detail"></div>
+            <div class="panel-foot"><button data-act="close-panel">Fechar (I)</button></div>
+          </div>
+        </div>
+
+        <!-- FIM DA ETAPA -->
+        <div id="endcard" class="screen dim hidden">
+          <div class="panel small center">
+            <h2>Fim da Etapa 1 · Ato I, caps. 1–2</h2>
+            <p>“E foi assim, por pura solidão, que ele criou a Van.”</p>
+            <p class="muted">A Etapa 1 termina aqui. O mundo continua aberto: explore a rua, complete as missões secundárias e encontre o segredo do telhado.</p>
+            <div class="menu-buttons"><button data-act="close-panel">Continuar explorando</button></div>
+          </div>
+        </div>
+
+        <!-- ERRO -->
+        <div id="error" class="screen dim hidden">
+          <div class="panel small">
+            <h2>Algo deu errado</h2>
+            <pre id="error-msg"></pre>
+            <div class="menu-buttons"><button data-act="error-continue">Tentar continuar</button><button data-act="quit">Menu principal</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <noscript><p style="color:#fff;padding:2em">Este jogo precisa de JavaScript ativado.</p></noscript>
+
+  <script src="js/core.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/powers.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/interact.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

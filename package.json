@@ -1,0 +1,14 @@
+{
+  "name": "v-o-arquiteto-da-realidade",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sandbox 2D baseado no romance V — O Homem Que Acordou Grande Demais. Abra index.html no navegador para jogar.",
+  "scripts": {
+    "test": "node tests/unit.js",
+    "test:e2e": "node tests/playthrough.js",
+    "start": "npx http-server -c-1 ."
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}
