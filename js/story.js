@@ -265,25 +265,43 @@
   };
 
   S.s1_vassoura = {
-    chapter: 1, safe: true, objective: 'Pegue a vassoura (no hall, atrás da porta do banheiro).',
+    chapter: 1, safe: true,
+    objectiveFn(st) { return st.local && st.local.phase ? 'Volte à cozinha e varra os cacos do copo.' : 'Pegue a vassoura (no hall, atrás da porta do banheiro).'; },
     enter(st, g, resumed) {
       const cup = g.propById('copo');
       if (resumed && cup && !cup.broken) { cup.break(g, 999); }
     },
     intercept(st, g, id) {
       if (id !== 'vassoura') return false;
-      if (st.local && st.local.started) return true;
-      st.local = { started: true };
-      st.say([
-        N('Foi só quando ele foi pegar a vassoura que a coisa se tornou séria.'),
-        N('Ele olhou os cacos espalhados no piso, aqueles pedacinhos que vão parar debaixo da geladeira e reaparecem seis meses depois na sola do pé, e pensou, com muita clareza, sem esforço nenhum:'),
-        P('Eu queria que isso não tivesse acontecido.'),
-      ], () => {
-        const cup = g.propById('copo');
-        if (cup && cup.broken) G.POWERS.restaurar.apply(g.powers, g, cup, true);
-        else st.afterRestore();
-      });
+      if (st.local && st.local.phase) return true;
+      st.local = { phase: 'carry', t: 0 };
+      g.player.carry = g.propById('vassoura');
+      g.audio.play('pickup', 0.6);
+      g.bubble('Vassoura. Pá. Os cacos vão parar debaixo da geladeira, como sempre.', 2.5, true);
+      st.refresh();
       return true;
+    },
+    update(st, g, dt) {
+      const L = st.local, p = g.player, cup = g.propById('copo');
+      if (!L || !cup) return;
+      if (L.phase === 'carry' && cup.broken && Math.abs(p.cx - cup.cx) < 26 && Math.abs(p.y + p.h - (cup.y + cup.h)) < 12) {
+        L.phase = 'sweep'; L.t = 1.8;
+        p.locked = true; p.vx = 0; p.facing = cup.cx > p.cx ? 1 : -1; p.sweepT = 1.8;
+      } else if (L.phase === 'sweep') {
+        L.t -= dt;
+        if (Math.random() < 0.4) g.particles.dust(cup.cx + U.rand(-6, 6), cup.y + cup.h, 1);
+        if (L.t <= 0) {
+          L.phase = 'think'; p.sweepT = 0;
+          st.say([
+            N('Foi só quando ele foi pegar a vassoura que a coisa se tornou séria.'),
+            N('Ele olhou os cacos espalhados no piso, aqueles pedacinhos que vão parar debaixo da geladeira e reaparecem seis meses depois na sola do pé, e pensou, com muita clareza, sem esforço nenhum:'),
+            P('Eu queria que isso não tivesse acontecido.'),
+          ], () => {
+            if (cup.broken) G.POWERS.restaurar.apply(g.powers, g, cup, true);
+            else st.afterRestore();
+          });
+        }
+      }
     },
     on(st, g, ev, d) { if (ev === 'prop:restored' && d.prop.id === 'copo') st.afterRestore(); },
   };
@@ -395,6 +413,8 @@
       if (ev === 'eat' && d.item === 'laranja_perfeita' && f.t_laranja && !f.t_comer) {
         f.t_comer = true;
         st.discover('comeu', 'Comeu a laranja. Era laranja demais.');
+        ['maca', 'banana', 'pao', 'cafe', 'chocolate'].forEach((id) => g.powers.unlockCriavel(id, true));
+        g.ui.toast('Se dá pra fazer uma laranja... Criar agora faz outras comidas (botão direito troca). ◆ original', 'power');
         st.say([N('Comeu a laranja. Era boa. Era laranja demais, se é que isso faz sentido — como se alguém tivesse pego a ideia de laranja e feito uma fruta a partir dela, sem o gomo ressecado, sem a semente inesperada. Perfeita de um jeito levemente errado.')]);
       }
       st.refresh();
@@ -520,8 +540,7 @@
         ], () => {
           st.discover('voo', 'Voar. (Bati a cabeça no teto. Humilhante.)');
           g.powers.vooInstavel = true;
-          g.player.clearPose(); G.Physics.unstick(g.player, g.world);
-          st.go('s2_dormir');
+          g.player.getUp(() => st.go('s2_dormir'));
         });
         return true;
       }
@@ -553,7 +572,7 @@
           N('Ele escolheu uma coisa pequena. Uma cicatriz no joelho esquerdo, de quando tinha nove anos e caiu da bicicleta do primo na rua de trás da casa da avó.'),
           { who: 'pensamento', text: 'Sentou no sofá. Olhou pro joelho.', choices: [
             { text: 'Pensar: "isso nunca aconteceu."', fn: () => st.go('s3_linha') },
-            { text: 'Ainda não.', orig: true, fn: () => { g.player.clearPose(); G.Physics.unstick(g.player, g.world); g.bubble('Daqui a pouco.', 1.5, true); } },
+            { text: 'Ainda não.', orig: true, fn: () => { g.player.getUp(); g.bubble('Daqui a pouco.', 1.5, true); } },
           ] },
         ]);
       };
@@ -563,14 +582,14 @@
   };
 
   S.s3_linha = {
-    chapter: 2, safe: true, objective: 'Segure tudo: arraste cada memória de volta até V. (Shift segura com mais força.)',
+    chapter: 2, safe: true, objective: 'Segure tudo: arraste cada memória de volta até V. (Segure C para segurar com mais força.)',
     enter(st, g) {
       const sofa = g.decorByType('sofa');
       g.player.setPose('sit', sofa.x + 6, floorApt - 8 - 26, 1);
       g.player.locked = true;
       g.powers.setEmotion('panico');
       st.say([N('Sentou no sofá. Olhou pro joelho. E pensou: isso nunca aconteceu.'), N('O que aconteceu em seguida durou, na melhor estimativa que ele conseguiu fazer depois, cerca de um segundo e meio.')], () => {
-        g.ui.toast('Arraste as memórias de volta até V antes que escorreguem. Shift = segurar com força.', 'power');
+        g.ui.toast('Arraste as memórias de volta até V antes que escorreguem. Segure C = segurar com força.', 'power');
         g.sequence = new LinhaSequence(g, () => st.go('s3_chao'));
       });
     },
@@ -594,7 +613,8 @@
         st.discover('linha', 'Desfazer eventos: tudo está amarrado em tudo. (Quase apaguei a minha vó.)');
         g.player.locked = false;
         g.flags.luz_sala = true;
-        g.skipTo(22 * 60, 'Aquela noite', () => { g.player.clearPose(); g.player.x = TS * 45; g.player.y = floorApt - 26; st.go('s3_noite'); });
+        // ele se levanta devagar, encostado no sofá, antes da noite chegar
+        g.player.getUp(() => g.skipTo(22 * 60, 'Aquela noite', () => st.go('s3_noite')));
       });
     },
   };
@@ -643,11 +663,9 @@
 
   S.s4_manha = {
     chapter: 2,
-    objectiveFn(st, g) { const c = g.propById('copo'); return c && c.broken ? 'O copo está quebrado. Restaure-o (tecla 2) e depois olhe para ele (E).' : 'Olhe o copo de requeijão na pia (E).'; },
+    objectiveFn(st, g) { const c = g.propById('copo'); return c && c.broken ? 'O copo está quebrado. Restaure-o (tecla 2) e depois olhe para ele (E).' : 'Levante, vá até a cozinha e olhe o copo de requeijão na pia (E).'; },
     enter(st, g) {
       g.clock.day = 4; g.clock.min = Math.max(g.clock.min % 1440, 7 * 60 + 19);
-      g.player.clearPose();
-      g.player.x = TS * 52 - 2; g.player.y = floorApt - 26;
       g.powers.setEmotion(st.flags.postura === 'parar' ? 'calmo' : 'curioso');
     },
     intercept(st, g, id) {
@@ -665,7 +683,22 @@
 
   S.s_livre = {
     chapter: 2, allowSleep: true,
-    objective: 'Fim da Etapa 1. Explore, complete missões secundárias e procure segredos. A próxima etapa começa com a Van.',
+    objective: 'Fim da Etapa 1. Explore a rua, converse com as pessoas, complete as missões secundárias e procure segredos. A próxima etapa começa com a Van.',
+    enter(st, g, resumed) {
+      g.powers.vooLivre = true;
+      g.powers.unlock('teleporte', { silent: !!resumed, select: false });
+      g.powers.unlockCriavel('dinheiro', !!resumed);
+    },
+    update(st, g) {
+      // a narração começa depois que a tela de fim da etapa é fechada
+      if (!st.flags.livreIntro && !g.ui.modal) {
+        st.flags.livreIntro = true;
+        st.say([
+          O('Nos dias seguintes, os testes ficaram maiores. Se o controle remoto podia atravessar a sala sem percorrer o caminho, por que ele não?'),
+          O('E o voo — que da primeira vez terminou no teto — lá fora, sem teto, era outra conversa.'),
+        ], () => g.ui.toast('Voo: no ar, segure Pular (gasta a Linha). Teleporte: tecla 7. Correr: Shift.', 'power'));
+      }
+    },
   };
 
   G.STORY_STEPS = S;
@@ -678,6 +711,26 @@
    * Missões secundárias — CONTEÚDO ORIGINAL DO JOGO
    * ------------------------------------------------------------------ */
   G.SIDE_QUESTS = {
+    experimentos: {
+      title: 'Experimentos de um curioso sem supervisão', orig: true,
+      desc: 'V testa tudo, compulsivamente, como sempre testou. Uma lista de coisas para tentar no apartamento e na rua.',
+      steps: [['levitar5', 'Levitar 5 objetos diferentes'], ['comidas4', 'Criar 4 comidas diferentes'], ['transformar5', 'Transformar 5 tipos de coisa'], ['restaurarQuebrado', 'Restaurar algo que quebrou'], ['caixotePesado', 'Segurar um caixote no ar por 3 segundos'], ['empilhar', 'Ficar em pé em cima de dois caixotes empilhados']],
+    },
+    pipa: {
+      title: 'A pipa na árvore', orig: true,
+      desc: 'A pipa de um menino enganchou no alto da árvore da praça. Sem escada.',
+      steps: [['descer', 'Trazer a pipa até o menino'], ['conversa', 'Responder como ela desceu']],
+    },
+    chave_senhora: {
+      title: 'A chave da senhora', orig: true,
+      desc: 'A senhora da janela do capítulo 1 sempre acha que esqueceu a chave. Desta vez ela não acha mesmo.',
+      steps: [['ver', 'Descobrir onde está a chave (sem mexer na bolsa dela)'], ['contar', 'Contar para ela']],
+    },
+    entrega: {
+      title: 'Ninguém atende no 32', orig: true,
+      desc: 'O entregador da moto tem um pacote para o apartamento 32, e ninguém atende.',
+      steps: [['resolver', 'Resolver a entrega (o porteiro pode ajudar; a Percepção também)']],
+    },
     tercas: {
       title: 'Gente fazendo suas terças-feiras', orig: true,
       desc: 'As cenas que V viu da janela estão lá embaixo, na rua. Observe cada uma (E perto delas, de dia).',
@@ -735,6 +788,14 @@
     update(dt) {
       this.dialog.update(dt);
       if (this.step && this.step.update && !this.dialog.active) this.step.update(this, this.g, dt);
+      // experimentos que dependem de tempo/posição
+      if (this.side.experimentos && this.side.experimentos.state !== 'done') {
+        const g = this.g, held = g.powers.held;
+        this._cxT = held && held.type === 'caixote' ? (this._cxT || 0) + dt : 0;
+        if (this._cxT > 3) this.progressSide('experimentos', 'caixotePesado');
+        const gr = g.player.groundRef;
+        if (gr && gr.type === 'caixote' && gr.groundRef && gr.groundRef.type === 'caixote') this.progressSide('experimentos', 'empilhar');
+      }
     }
     onEvent(ev, d) {
       if (this.step && this.step.on) this.step.on(this, this.g, ev, d || {});
@@ -752,15 +813,22 @@
       const g = this.g;
       g.powers.unlock('restaurar', { select: false });
       st_discover(this, 'restaurar', 'Desfazer: o copo voltou inteiro pra pia. O chão estava seco.');
-      g.player.setPose('sitFloor', TS * 50 + 2, TS * 30 - 26, -1);
+      // como no livro: o evento inteiro se desfez — inclusive a vassoura nas mãos dele
+      const p = g.player;
+      p.dropCarry(); p.sweepT = 0;
+      const vas = g.resetProp('vassoura');
+      if (vas) { vas.flash = 0.6; g.particles.ring(vas.cx, vas.cy, '#ffd27a', 10); }
+      p.locked = false;
+      p.setPose('sitFloor', p.x, TS * 30 - 26, p.facing);
       this.say([
         N('E não tinha acontecido.'),
         N('O copo estava na pia. Inteiro. Com a marca da etiqueta velha ainda meio descascada de um lado. O chão estava seco.'),
+        N('A vassoura continuava encostada atrás da porta do banheiro, onde ele nunca lembrava de guardá-la direito, e a mão dele continuava estendida no ar segurando nada.'),
         N('Dessa vez ele não riu.'),
         N('Ele sentou no chão da cozinha, encostou a nuca no armário de baixo, e ficou ali por muito tempo.'),
         N('É a sensação de estar sentado numa cadeira que você usou a vida inteira e descobrir, de repente, que ela nunca teve pernas. Que ela estava flutuando esse tempo todo. E que ninguém te avisou.'),
         N('V levantou. Olhou para o copo. Estendeu a mão de novo — não para pegar, só apontada, meio boba, do jeito que criança aponta pra coisa que quer.'),
-      ], () => { g.player.clearPose(); G.Physics.unstick(g.player, g.world); this.go('s1_sobe'); });
+      ], () => g.player.getUp(() => this.go('s1_sobe')));
     }
     discover(id, text, opts) { st_discover(this, id, text, opts); }
     registro(id, title, text, orig) {
@@ -800,6 +868,8 @@
         this.registro('tercas', 'Gente fazendo suas terças-feiras', 'Um cachorro puxando uma pessoa, uma moto de entrega subindo na calçada, uma senhora conferindo se trouxe a chave, um casal discutindo em volume moderado. Oito bilhões de pessoas fazendo suas terças-feiras. (cena do cap. 1; observações de V são conteúdo original)', true);
       }
       if (id === 'terraco') g.powers.addCompreensao(1, 'segredo do telhado');
+      if (id === 'experimentos') g.powers.addCompreensao(2, 'testando tudo');
+      if (id === 'pipa' || id === 'chave_senhora' || id === 'entrega') g.powers.addCompreensao(1, G.SIDE_QUESTS[id].title.toLowerCase());
     }
     sideEvent(ev, d) {
       const g = this.g;
@@ -834,6 +904,38 @@
         }
       }
       if (ev === 'door' && d.id === 'alcapao' && d.open) this.progressSide('terraco', 'alcapao');
+
+      // experimentos (contagens)
+      const X = this.flags.exp = this.flags.exp || { lev: {}, com: {}, tra: {} };
+      if (this.flags.t_entortar || this.stepId === 's1_testes') this.activateSideQuiet('experimentos');
+      if (ev === 'levitate:start') { X.lev[d.prop.id] = 1; if (Object.keys(X.lev).length >= 5) this.progressSide('experimentos', 'levitar5'); }
+      if (ev === 'create') { X.com[d.kind || 'laranja'] = 1; if (Object.keys(X.com).filter((k) => k !== 'dinheiro').length >= 4) this.progressSide('experimentos', 'comidas4'); }
+      if (ev === 'transform') { X.tra[d.type] = 1; if (Object.keys(X.tra).length >= 5) this.progressSide('experimentos', 'transformar5'); }
+      if (ev === 'prop:restored' && d.wasBroken && d.prop.id !== 'copo') this.progressSide('experimentos', 'restaurarQuebrado');
+      if (ev === 'prop:restored' && d.wasBroken && d.prop.id === 'copo' && this.flags.restaurouCopo) this.progressSide('experimentos', 'restaurarQuebrado');
+
+      // a casa dos outros (Percepção nos apartamentos) — conteúdo original do jogo
+      if (ev === 'perceive:region' && g.regions[d.id] && g.regions[d.id].apto) {
+        const esp = this.flags.espiou = this.flags.espiou || {};
+        if (d.id === 'apto32') { this.flags.viu32 = true; if (this.side.entrega) g.bubble('O 32 está vazio. Caixas e poeira.', 2.5, true); }
+        if (!esp[d.id]) {
+          esp[d.id] = 1;
+          const n = Object.keys(esp).length;
+          if (d.id === 'apto31') g.bubble('Sete anos ouvindo esse barulho. E mesmo olhando, não dá pra saber o que é.', 3.5, true);
+          if (n === 1) {
+            const prometeu = g.powers.blockedRegions.has('paredeVizinho');
+            g.powers.setEmotion('assustado');
+            this.say([P(prometeu ? 'Eu escrevi NUNCA MAIS. Sublinhei duas vezes. E mesmo assim eu tô aqui, olhando a casa dos outros.' : 'Isso aqui é a casa de alguém. Gente que não sabe que tem alguém olhando.', true)]);
+            this.registro('promessa', 'A casa dos outros', prometeu ? 'Ele tinha prometido. Olhou mesmo assim. Ninguém nunca vai saber — e é exatamente isso que pesa.' : 'Olhou para dentro da casa de alguém sem ser convidado. A Linha pesa mais quando ele faz isso.', true);
+          }
+        }
+      }
+    }
+    activateSideQuiet(id) {
+      if (this.side[id]) return;
+      this.side[id] = { state: 'active', done: {} };
+      this.g.ui.toast('Missão secundária: ' + G.SIDE_QUESTS[id].title + ' ◆ original', 'quest');
+      this.dirty = true;
     }
 
     serialize() {

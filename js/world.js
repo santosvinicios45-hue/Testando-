@@ -155,17 +155,9 @@
     w.fillBg(31, 23, 59, 25, B.CORREDOR);
     w.fill(30, 22, 30, 37, T.BRICK);
     w.fill(60, 22, 60, 37, T.BRICK);
-    for (const row of [34, 30, 26]) {
-      w.fill(30, row, 60, row, T.CONCRETE);
-      w.fill(31, row, 34, row, T.PLATFORM); // poço da escada
-    }
+    for (const row of [34, 30, 26]) w.fill(30, row, 60, row, T.CONCRETE);
     w.fill(30, 22, 60, 22, T.ROOF);
     w.fill(32, 22, 34, 22, T.HATCH_C);     // alçapão do telhado
-    // patamares intermediários da escada
-    w.fill(31, 36, 32, 36, T.PLATFORM);
-    w.fill(33, 32, 34, 32, T.PLATFORM);
-    w.fill(31, 28, 32, 28, T.PLATFORM);
-    w.fill(33, 24, 34, 24, T.PLATFORM);
     // portaria
     w.set(60, 36, T.DOOR_C); w.set(60, 37, T.DOOR_C);
     // janelas laterais
@@ -240,6 +232,7 @@
       // praça (conteúdo original do jogo)
       { id: 'banco', type: 'banco', x: t(92) + 1, y: ground - 12 },
       { id: 'poste', type: 'poste', x: t(97) + 5, y: ground - 56 },
+      { id: 'pipa', type: 'pipa', x: t(87) + 6, y: ground - 66 },
     ];
 
     // ---------- itens coletáveis ----------
@@ -265,8 +258,8 @@
       { type: 'mesinha', x: t(56) + 3, y: floorApt - 10, w: 10, h: 10, surfaces: [[0, 0, 10]] },
       { type: 'abajur', x: t(56) + 4, y: floorApt - 22, w: 8, h: 12 },
       { type: 'sofa', x: t(57), y: floorApt - 15, w: 30, h: 15, surfaces: [[3, 7, 24]] },
-      { type: 'rack', x: t(59) + 1, y: floorApt - 9, w: 14, h: 9, surfaces: [[0, 0, 14]] },
-      { type: 'tv', x: t(59) + 1, y: floorApt - 21, w: 14, h: 12 },
+      { type: 'tv', x: t(54) + 8, y: t(27) + 3, w: 16, h: 11, wall: true },
+      { type: 'planta', x: t(59) + 3, y: floorApt - 18, w: 10, h: 18 },
       { type: 'lustre', x: t(55) + 4, y: t(27), w: 8, h: 6 },
       { type: 'interruptor', x: t(49) - 3, y: floorApt - 18, w: 3, h: 4 },
       // quarto
@@ -289,6 +282,7 @@
       { type: 'luminaria', x: t(50), y: t(35), w: 8, h: 3 },
       // portaria
       { type: 'caixas_correio', x: t(42), y: ground - 26, w: 40, h: 18 },
+      { type: 'balcao_portaria', x: t(52) + 4, y: ground - 15, w: 34, h: 15, front: true },
       { type: 'planta', x: t(56), y: ground - 18, w: 10, h: 18 },
       { type: 'tapete', x: t(57), y: ground - 2, w: 30, h: 2 },
       // telhado
@@ -308,10 +302,10 @@
       // rua
       { type: 'faixa', x: t(66), y: ground - 1, w: t(12), h: 2 },
       { type: 'poste_ok', x: t(65), y: ground - 58, w: 14, h: 58, light: true },
-      { type: 'carro', x: t(70), y: ground - 16, w: 38, h: 16, cor: '#7d2e2e' },
+      { type: 'carro', x: t(69), y: ground - 26, w: 76, h: 26, cor: '#7d2e2e' },
       { type: 'poste_ok', x: t(126), y: ground - 58, w: 14, h: 58, light: true },
       { type: 'ponto', x: t(130), y: ground - 34, w: 40, h: 34 },
-      { type: 'carro', x: t(136), y: ground - 16, w: 38, h: 16, cor: '#3d5a80' },
+      { type: 'carro', x: t(135), y: ground - 26, w: 76, h: 26, cor: '#3d5a80' },
       { type: 'barreira', x: t(144) + 4, y: ground - 14, w: 36, h: 14 },
       // praça
       { type: 'arvore', x: t(86), y: ground - 74, w: 58, h: 74 },
@@ -322,7 +316,7 @@
       // padaria
       { type: 'letreiro', x: t(103), y: t(33) + 4, w: t(8), h: 12, text: 'PADARIA' },
       { type: 'prateleira_pao', x: t(108), y: t(35) + 1, w: 64, h: 18 },
-      { type: 'balcao', x: t(108) + 4, y: ground - 15, w: 60, h: 15, surfaces: [[0, 0, 60]] },
+      { type: 'balcao', x: t(108) + 4, y: ground - 15, w: 60, h: 15, surfaces: [[0, 0, 60]], front: true },
       { type: 'mesa_bar', x: t(117), y: ground - 13, w: 20, h: 13 },
       { type: 'mesa_bar', x: t(120) + 4, y: ground - 13, w: 20, h: 13 },
       { type: 'luminaria', x: t(110), y: t(35), w: 8, h: 3 },
@@ -352,25 +346,40 @@
       { id: 'passeador', kind: 'passeador', x: t(70), y: ground - 26 },
       { id: 'moto', kind: 'moto', x: t(78), y: ground - 26 },
       { id: 'senhora', kind: 'senhora', x: t(100), y: ground - 24 },
-      { id: 'casal_a', kind: 'casal_a', x: t(90), y: ground - 26 },
-      { id: 'casal_b', kind: 'casal_b', x: t(91) + 6, y: ground - 25 },
+      { id: 'casal_a', kind: 'casal_a', x: t(90) + 4, y: ground - 26 },
+      { id: 'casal_b', kind: 'casal_b', x: t(91) + 10, y: ground - 25 },
+      { id: 'crianca', kind: 'crianca', x: t(86) + 12, y: ground - 18 },
+      { id: 'porteiro', kind: 'porteiro', x: t(53) + 6, y: ground - 26, behind: true },
       { id: 'atendente', kind: 'atendente', x: t(110) + 4, y: ground - 26, behind: true },
     ];
 
     // ---------- regiões especiais (px) ----------
     const regions = {
-      paredeVizinho: { x: t(54), y: t(27), w: t(5), h: t(3) },
+      paredeVizinho: { x: t(54), y: t(27), w: t(5), h: t(3), scene: 'vizinho' },
+      apto11: { x: t(38), y: t(31), w: t(6), h: t(3), scene: 'apto11', perceivable: true, apto: true },
+      apto12: { x: t(48), y: t(31), w: t(6), h: t(3), scene: 'apto12', perceivable: true, apto: true },
+      apto31: { x: t(43), y: t(23), w: t(6), h: t(3), scene: 'apto31', perceivable: true, apto: true },
+      apto32: { x: t(50), y: t(23), w: t(6), h: t(3), scene: 'apto32', perceivable: true, apto: true },
       pia: { x: t(50), y: counterTop - 14, w: t(3), h: 16 },
       bancadaTopo: { x: t(50), y: counterTop - 1, w: t(3), h: 2 },
       chaoCozinha: { x: t(49) - 4, y: floorApt - 4, w: 24, h: 4 },
     };
+
+    // ---------- escada do prédio (lances em zigue-zague) ----------
+    const xa = t(31) + 2, xb = t(35) + 2;
+    const stairs = [
+      { id: 'lance0', x0: xa, y0: t(38), x1: xb, y1: t(34) },
+      { id: 'lance1', x0: xb, y0: t(34), x1: xa, y1: t(30) },
+      { id: 'lance2', x0: xa, y0: t(30), x1: xb, y1: t(26) },
+      { id: 'lance3', x0: xb, y0: t(26), x1: t(32) + 3, y1: t(22), hatch: true },
+    ];
 
     // ---------- pombos da praça ----------
     const pigeons = [];
     for (let i = 0; i < 7; i++) pigeons.push({ x: t(84) + i * 22 + (i % 2) * 7, y: ground - 3 });
 
     return {
-      world: w, props, pickups, decor, lights, npcs, regions, pigeons,
+      world: w, props, pickups, decor, lights, npcs, regions, pigeons, stairs,
       spawn: { x: t(52) - 2, y: floorApt - 26 },
       bathroomSpawn: { x: t(4) + 2, y: t(46) - 26 },
       hallSpawn: { x: t(40) + 4, y: floorApt - 26 },

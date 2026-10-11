@@ -40,7 +40,7 @@
     if (o.landT > 0) bob = 1;
 
     const sit = st === 'sit', sitFloor = st === 'sitFloor';
-    const dy = sit ? 7 : sitFloor ? 9 : bob;
+    const dy = sit ? 7 : sitFloor ? 9 : st === 'rise' ? 4 : bob;
     const hy = (n) => n + dy;
 
     // braço de trás
@@ -96,6 +96,8 @@
     } else if (st === 'fall') { px(6, hy(5), 2, 5, pal.shirt); px(6, hy(4), 2, 1, pal.skin); }
     else if (st === 'fly') { px(6, hy(10), 2, 5, pal.shirt); px(7, hy(15), 2, 1, pal.skin); }
     else if (st === 'stun') { px(6, hy(10), 2, 4, pal.shirt); px(7, hy(6), 2, 4, pal.shirt); px(7, hy(5), 2, 1, pal.skin); }
+    else if (st === 'sweep') { px(6, hy(10), 3, 2, pal.shirt); px(8, hy(11), 2, 2, pal.skin); }
+    else if (o.carrying) { px(6, hy(10), 2, 3, pal.shirt); px(7, hy(12), 2, 2, pal.skin); }
     else if (o.handOnBag) { px(5, hy(11), 2, 4, pal.shirt); px(5, hy(15 + o.handOnBag), 2, 1, pal.skin); }
     else if (o.gesture) { px(6, hy(9 - o.gesture), 2, 5, pal.shirt); px(7, hy(8 - o.gesture), 1, 1, pal.skin); }
     else { px(5 + armF, hy(10), 2, 5, pal.shirt); px(5 + armF, hy(15), 2, 1, pal.skin); }
@@ -131,14 +133,26 @@
     px(3 - (s > 0 ? 1 : 0), 6, 1, 2, '#a0703c'); px(6 + (s > 0 ? 1 : 0), 6, 1, 2, '#a0703c');
   }
   function moto(c, x, y, facing, anim, hop) {
+    // moto de entrega 24×20 com o entregador SENTADO por cima do banco
     const f = facing >= 0 ? 1 : -1;
-    const px = (dx, dy, w, h, col) => R(c, f > 0 ? x + dx : x + (22 - dx - w), y + dy, w, h, col);
-    const wy = 13 - (hop ? Math.round(hop * 3) : 0);
-    px(1, wy, 5, 5, '#1b1b1b'); px(16, wy, 5, 5, '#1b1b1b'); px(3, wy + 2, 1, 1, '#888'); px(18, wy + 2, 1, 1, '#888');
-    px(4, wy - 3, 14, 3, '#c0392b'); px(15, wy - 6, 2, 4, '#555'); px(14, wy - 7, 4, 1, '#333');
-    px(0, wy - 9, 7, 6, '#e67e22'); px(1, wy - 8, 5, 1, '#f5b041'); // baú de entrega
-    // piloto
-    human(c, x + (f > 0 ? 6 : 6), y - 10 - (hop ? Math.round(hop * 3) : 0), { facing: f, state: 'sit', t: anim, pal: { skin: '#8d5a3b', skinS: '#6e432a', hair: '#111', shirt: '#2c3e50', shirtS: '#1f2d3a', pants: '#34495e', pantsS: '#273746', shoe: '#222', eye: '#111', belt: '#222' }, hairStyle: 'helmet' });
+    const W = 24;
+    const px = (dx, dy, w, h, col) => R(c, f > 0 ? x + dx : x + (W - dx - w), y + dy, w, h, col);
+    const lift = hop ? Math.round(hop * 3) : 0;
+    const wy = 15 - lift;
+    // rodas
+    px(1, wy, 6, 5, '#1b1b1b'); px(17, wy, 6, 5, '#1b1b1b'); px(3, wy + 2, 2, 1, '#9a9a9a'); px(19, wy + 2, 2, 1, '#9a9a9a');
+    // baú de entrega atrás
+    px(0, wy - 12, 8, 7, '#e67e22'); px(1, wy - 11, 6, 1, '#f5b041'); px(3, wy - 9, 2, 2, '#ffffff');
+    // chassi, banco e guidão
+    px(4, wy - 3, 16, 3, '#c0392b'); px(6, wy - 5, 9, 2, '#2b2b2b'); px(17, wy - 9, 2, 7, '#555'); px(16, wy - 10, 5, 1, '#333'); px(20, wy - 4, 2, 2, '#ffe08a');
+    // piloto sentado (quadril sobre o banco, mãos no guidão)
+    const sk = '#8d5a3b', jk = '#2c3e50', pt = '#34495e';
+    const by = wy - 6;
+    px(8, by - 9, 6, 8, jk);                 // tronco
+    px(13, by - 8, 4, 2, jk); px(16, by - 9, 1, 2, sk); // braço até o guidão
+    px(9, by - 15, 5, 6, sk); px(12, by - 13, 1, 1, '#111'); // cabeça
+    px(8, by - 16, 7, 4, '#c0392b'); px(13, by - 14, 2, 2, '#2b2b2b'); // capacete
+    px(9, by - 1, 7, 2, pt); px(14, by, 2, 5, pt); px(14, by + 4, 3, 2, '#222'); // perna no pedal
   }
   function pigeon(c, x, y, fly, t, dir) {
     const f = dir >= 0 ? 1 : -1;
@@ -191,6 +205,13 @@
       case 'lata': if (p.state.amassada) { R(c, x + 1, y + 2, 3, 4, '#c0392b'); R(c, x, y + 3, 4, 1, '#ddd'); } else { R(c, x, y, 4, 6, '#c0392b'); R(c, x, y, 4, 1, '#ddd'); R(c, x, y + 5, 4, 1, '#aaa'); R(c, x + 1, y + 2, 2, 2, '#f1f1f1'); } break;
       case 'bola': { const col = p.state.cor || '#e74c3c'; R(c, x + 2, y, 3, 7, col); R(c, x, y + 2, 7, 3, col); R(c, x + 1, y + 1, 5, 5, col); R(c, x + 2, y + 1, 2, 2, 'rgba(255,255,255,0.6)'); break; }
       case 'garrafa': R(c, x, y + 3, 3, 5, '#2f8f46'); R(c, x + 1, y, 1, 3, '#2f8f46'); R(c, x, y + 4, 1, 3, '#55c16f'); break;
+      case 'maca': R(c, x + 1, y + 1, 3, 4, '#d62828'); R(c, x, y + 2, 5, 2, '#d62828'); R(c, x + 1, y + 1, 1, 1, '#ff8a8a'); R(c, x + 2, y - 1, 1, 2, '#5a3d24'); R(c, x + 3, y - 1, 2, 1, '#3f9b3a'); break;
+      case 'banana': R(c, x, y, 2, 1, '#e6c229'); R(c, x + 1, y + 1, 5, 1, '#f5d742'); R(c, x + 5, y, 2, 1, '#e6c229'); R(c, x + 2, y + 2, 3, 1, '#c9a51f'); R(c, x, y, 1, 1, '#5a3d24'); break;
+      case 'pao': R(c, x, y + 1, 7, 3, '#d9a05b'); R(c, x + 1, y, 5, 1, '#e8c07a'); R(c, x + 2, y + 1, 1, 1, '#b07a3a'); R(c, x + 4, y + 1, 1, 1, '#b07a3a'); break;
+      case 'cafe': R(c, x, y + 1, 4, 4, '#f3f3f3'); R(c, x, y + 1, 4, 1, '#5a2d14'); R(c, x + 4, y + 2, 1, 2, '#f3f3f3'); if (Math.sin(env.time * 4) > 0) R(c, x + 1, y - 1, 1, 1, 'rgba(255,255,255,0.6)'); break;
+      case 'chocolate': R(c, x, y, 7, 3, '#5b3418'); R(c, x + 3, y, 4, 3, '#c0392b'); R(c, x + 1, y + 1, 1, 1, '#7a4a28'); break;
+      case 'dinheiro': R(c, x, y, 7, 4, '#c96f4b'); R(c, x + 1, y + 1, 5, 2, '#e3946f'); R(c, x + 3, y + 1, 1, 2, '#9c4f2f'); break;
+      case 'pipa': { const sway = p.static ? Math.sin(env.time * 3) * 1 : 0; R(c, x + 4, y + sway, 1, 1, '#e74c3c'); R(c, x + 2, y + 1 + sway, 5, 2, '#e74c3c'); R(c, x + 1, y + 3 + sway, 7, 2, '#f1c40f'); R(c, x + 2, y + 5 + sway, 5, 2, '#3498db'); R(c, x + 4, y + 7 + sway, 1, 4, '#ecf0f1'); break; }
       case 'painel': R(c, x, y, 12, 8, '#8e969c'); R(c, x + 1, y + 1, 10, 6, '#a6aeb4'); R(c, x + 1, y + 1, 1, 1, '#555'); R(c, x + 10, y + 6, 1, 1, '#555'); R(c, x + 3, y + 3, 6, 1, '#6b7378'); if (p.perceived) R(c, x + 8, y, 1, 4, '#3d4245'); break;
       case 'banco': bench(c, x, y, p); break;
       case 'poste': lampPost(c, x, y, p, env); break;
@@ -263,7 +284,8 @@
       case 'sofa': R(c, x, y + 2, w, h - 4, '#5b4a7a'); R(c, x + 2, y, w - 4, 7, '#6b5a8c'); R(c, x + 3, y + 7, w - 6, 3, '#7a69a0'); R(c, x + 15, y + 7, 1, 3, '#5b4a7a'); R(c, x, y + 5, 3, 7, '#4e3f6b'); R(c, x + w - 3, y + 5, 3, 7, '#4e3f6b'); R(c, x + 2, y + h - 2, 2, 2, '#2b2333'); R(c, x + w - 4, y + h - 2, 2, 2, '#2b2333'); break;
       case 'rack': R(c, x, y, w, h, '#3d3027'); R(c, x + 1, y + 2, w - 2, h - 3, '#2a211b'); R(c, x + 2, y + 4, 5, 2, '#111'); break;
       case 'tv': {
-        R(c, x, y, w, h - 2, '#111317'); R(c, x + 6, y + h - 2, 2, 2, '#222');
+        if (d.wall) R(c, x + w / 2 - 2, y - 2, 4, 2, '#444');
+        R(c, x, y, w, h - 2, '#111317'); if (!d.wall) R(c, x + 6, y + h - 2, 2, 2, '#222');
         if (env.flags.tvOn) { const n = Math.floor(env.time * 8); R(c, x + 1, y + 1, w - 2, h - 4, n % 2 ? '#3a6ea5' : '#4a7eb5'); R(c, x + 2 + (n % 5), y + 3, 3, 2, '#f1c40f'); R(c, x + 1, y + h - 5, w - 2, 1, '#e74c3c'); }
         else R(c, x + 1, y + 1, w - 2, h - 4, '#1c232c');
         break;
@@ -293,7 +315,15 @@
       case 'cone': R(c, x + 2, y, 2, 2, '#e67e22'); R(c, x + 1, y + 2, 4, 2, '#f5f5f5'); R(c, x + 1, y + 4, 4, 3, '#e67e22'); R(c, x, y + 7, 6, 1, '#333'); break;
       case 'faixa': for (let i = 0; i < w; i += 8) R(c, x + i, y, 5, 1, '#f1f1ea'); break;
       case 'poste_ok': R(c, x + 6, y + 6, 2, h - 6, '#2f3439'); R(c, x + 6, y + 4, 8, 2, '#2f3439'); R(c, x + 10, y + 6, 4, 3, '#3b4249'); R(c, x + 11, y + 8, 2, 1, env.night > 0.25 ? '#ffe6a8' : '#888'); R(c, x + 4, y + h - 3, 6, 3, '#262a2e'); break;
-      case 'carro': { const col = d.cor || '#7d2e2e'; R(c, x + 2, y + 6, w - 4, 7, col); R(c, x + 8, y + 1, w - 18, 6, col); R(c, x + 10, y + 2, 7, 4, '#9fc3d6'); R(c, x + 19, y + 2, 7, 4, '#9fc3d6'); R(c, x + 5, y + 12, 6, 4, '#151515'); R(c, x + w - 11, y + 12, 6, 4, '#151515'); R(c, x + w - 4, y + 7, 2, 2, '#ffd166'); break; }
+      case 'carro': {
+        const col = d.cor || '#7d2e2e', k = w / 76;
+        const Q = (a, b, ww, hh, cc) => R(c, x + a * k, y + b * k, ww * k, hh * k, cc);
+        Q(2, 10, 72, 10, col); Q(16, 1, 38, 10, col); Q(19, 3, 15, 7, '#9fc3d6'); Q(36, 3, 15, 7, '#9fc3d6'); Q(34, 3, 2, 7, col);
+        Q(2, 10, 72, 1, 'rgba(255,255,255,0.25)'); Q(36, 12, 1, 7, 'rgba(0,0,0,0.35)'); Q(44, 13, 4, 1, '#ddd');
+        Q(9, 17, 11, 9, '#151515'); Q(55, 17, 11, 9, '#151515'); Q(12, 20, 5, 3, '#888'); Q(58, 20, 5, 3, '#888');
+        Q(71, 12, 3, 3, '#ffd166'); Q(2, 12, 2, 3, '#e74c3c'); break;
+      }
+      case 'balcao_portaria': R(c, x, y, w, 3, '#d9d4c7'); R(c, x, y + 3, w, h - 3, '#5d4a3a'); R(c, x + 3, y + 5, w - 6, h - 8, '#6e5845'); R(c, x + 4, y - 7, 9, 7, '#1c232c'); R(c, x + 5, y - 6, 7, 4, '#4a7eb5'); R(c, x + 22, y - 2, 8, 2, '#e9dfc9'); break;
       case 'ponto': R(c, x, y, w, 3, '#5b6b75'); R(c, x + 2, y + 3, 2, h - 3, '#5b6b75'); R(c, x + w - 4, y + 3, 2, h - 3, '#5b6b75'); R(c, x + 6, y + 6, 18, 16, '#f0f0e8'); R(c, x + 7, y + 7, 16, 14, '#9ec5e8'); R(c, x + 6, y + h - 10, w - 10, 2, '#7a8a94'); break;
       case 'barreira': for (let i = 0; i < w; i += 6) R(c, x + i, y + 2, 4, 4, (i / 6) % 2 ? '#f5f5f5' : '#e74c3c'); R(c, x + 2, y + 6, 2, h - 6, '#555'); R(c, x + w - 4, y + 6, 2, h - 6, '#555'); break;
       case 'arvore': R(c, x + w / 2 - 3, y + 34, 6, h - 34, '#6b4a2f'); R(c, x + w / 2 - 1, y + 34, 2, h - 34, '#7d5a3a');
@@ -329,6 +359,15 @@
       case 'gelo': P(3, 5, 10, 7, '#cfeaff'); P(4, 6, 8, 5, '#a7d4f2'); P(6, 3, 4, 2, '#5d7fa3'); break;
       case 'pao': P(2, 7, 12, 5, '#d9a05b'); P(3, 6, 10, 1, '#e8c07a'); P(5, 8, 1, 2, '#b07a3a'); P(8, 8, 1, 2, '#b07a3a'); P(11, 8, 1, 2, '#b07a3a'); break;
       case 'chave': P(2, 6, 5, 5, '#d4b16a'); P(3, 7, 3, 3, '#1b1b1b'); P(7, 8, 7, 1, '#d4b16a'); P(11, 9, 1, 2, '#d4b16a'); P(13, 9, 1, 2, '#d4b16a'); break;
+      case 'teleporte': P(2, 5, 4, 8, '#ff7ad9'); P(10, 3, 4, 8, '#ffd1f2'); P(6, 7, 1, 1, '#ff7ad9'); P(8, 6, 1, 1, '#ff7ad9'); P(3, 3, 2, 2, '#ffd1f2'); break;
+      case 'maca': P(4, 5, 8, 8, '#d62828'); P(5, 4, 6, 10, '#d62828'); P(6, 6, 2, 2, '#ff8a8a'); P(8, 2, 1, 3, '#5a3d24'); P(9, 2, 3, 2, '#3f9b3a'); break;
+      case 'banana': P(2, 5, 3, 2, '#e6c229'); P(4, 7, 8, 3, '#f5d742'); P(11, 5, 3, 2, '#e6c229'); P(5, 10, 6, 1, '#c9a51f'); break;
+      case 'cafe': P(3, 5, 8, 8, '#f3f3f3'); P(3, 5, 8, 2, '#5a2d14'); P(11, 7, 2, 4, '#f3f3f3'); P(5, 2, 1, 2, '#ddd'); P(8, 1, 1, 3, '#ddd'); break;
+      case 'chocolate': P(2, 5, 12, 6, '#5b3418'); P(8, 5, 6, 6, '#c0392b'); P(3, 6, 2, 2, '#7a4a28'); break;
+      case 'sonho': P(2, 6, 12, 6, '#e8b56a'); P(3, 5, 10, 1, '#f3d29a'); P(2, 8, 12, 2, '#fff4d6'); P(4, 5, 1, 1, '#fff'); P(9, 5, 1, 1, '#fff'); break;
+      case 'bala': P(5, 6, 6, 5, '#ff5e7a'); P(2, 7, 3, 3, '#ffd1dc'); P(11, 7, 3, 3, '#ffd1dc'); break;
+      case 'pacote': P(2, 4, 12, 9, '#c8a165'); P(7, 4, 2, 9, '#e3cf9a'); P(2, 7, 12, 1, '#e3cf9a'); break;
+      case 'dinheiro': P(1, 4, 14, 8, '#c96f4b'); P(2, 5, 12, 6, '#e3946f'); P(7, 6, 2, 4, '#9c4f2f'); break;
       default: P(4, 4, 8, 8, '#888');
     }
   }

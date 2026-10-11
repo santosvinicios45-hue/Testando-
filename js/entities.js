@@ -35,6 +35,14 @@
     garrafa: { name: 'Garrafa', w: 3, h: 8, mass: 0.3, fragile: true, breakSpeed: 130,
       shards: ['#2f8f46', '#4fb468', '#1d6b31'], sound: 'glass' },
     painel: { name: 'Painel solto', w: 12, h: 8, mass: 0.4, static: true, hidden: true },
+    // comidas criadas (a laranja é canônica; as outras são extensão original do jogo)
+    maca: { name: 'Maçã perfeita', w: 5, h: 5, mass: 0.2, bounce: 0.3, item: 'maca' },
+    banana: { name: 'Banana perfeita', w: 7, h: 3, mass: 0.15, item: 'banana' },
+    pao: { name: 'Pão perfeito', w: 7, h: 4, mass: 0.1, item: 'pao_frances' },
+    cafe: { name: 'Café', w: 4, h: 5, mass: 0.2, item: 'cafe' },
+    chocolate: { name: 'Chocolate', w: 7, h: 3, mass: 0.1, item: 'chocolate' },
+    dinheiro: { name: 'Nota de 10 reais', w: 7, h: 4, mass: 0.02, money: 10 },
+    pipa: { name: 'Pipa', w: 9, h: 11, mass: 0.1, static: true },
     banco: { name: 'Banco da praça', w: 30, h: 12, mass: 20, static: true, structure: true, startsBroken: true, platform: true },
     poste: { name: 'Poste da praça', w: 6, h: 56, mass: 30, static: true, structure: true, startsBroken: true },
   };
@@ -70,6 +78,7 @@
       this.forceBreak = false;
       this.dynamic = !!spec.dynamic; // criado durante o jogo (ex.: laranjas)
       this.removed = false;
+      this.carried = false;
       this.flash = 0;
       if (this.type === 'caixote' && this.state.metal) this.mass = 7;
       if (this.broken) { this.breakPoint = { x: this.x, y: this.y }; this.restOnBreak = { x: this.x, y: this.y }; this.preBreak = []; }
@@ -97,6 +106,7 @@
       this.updateShards(dt, game);
       if (this.restoring) { this.updateRestore(dt, game); return; }
       if (this.broken || this.frozen || this.removed) return;
+      if (this.carried) return; // nas mãos de V (posição definida pelo jogador)
       if (this.static && !this.held) return;
 
       if (this.held) {
@@ -339,66 +349,118 @@
    * discutindo em volume moderado"). Falas e comportamentos são
    * conteúdo original do jogo.
    * ------------------------------------------------------------------ */
+  const REACT = {
+    levitate: ['Que isso?!', 'Tá flutuando...', 'Eu tô vendo coisa?'],
+    break: ['Opa!', 'Quebrou sozinho?', 'Nossa!'],
+    create: ['De onde veio isso?', 'Isso apareceu do nada!', 'Mágica?'],
+    deslocar: ['Sumiu... e apareceu ali!', 'Eu juro que vi!', 'Hein?!'],
+    teleport: ['O moço sumiu!', 'CADÊ ELE?', 'Meu Deus!'],
+    fly: ['ELE TÁ VOANDO!', 'Socorro!', 'Isso é um drone?'],
+    restore: ['Consertou sozinho...', 'Tava quebrado agora mesmo!', 'Ué?!'],
+    hit: ['Ai!', 'Ei! Cuidado!', 'Quem jogou isso?'],
+  };
+
+  /** Pessoas: andam, conversam, reagem ao que V faz perto delas e lembram disso. */
   class NPC {
     constructor(spec) {
       Object.assign(this, spec);
       this.w = 10; this.h = 26; this.t = Math.random() * 10; this.facing = -1;
       this.anim = 0; this.moving = false; this.say = null; this.sayT = 0;
       this.homeX = this.x; this.phase = 0; this.timer = U.rand(1, 4); this.visibleNow = true;
-      if (this.kind === 'moto') { this.w = 22; this.h = 18; this.y += 8; }
+      this.scared = 0; this.stare = 0; this.hitT = 0; this.alert = 0; this.memory = {};
+      if (this.kind === 'moto') { this.w = 24; this.h = 20; this.y += 6; }
       if (this.kind === 'senhora') { this.h = 24; }
-      this.dog = this.kind === 'passeador' ? { x: this.x - 16, y: this.y + 18, anim: 0 } : null;
+      if (this.kind === 'crianca') { this.h = 18; }
+      this.dog = this.kind === 'passeador' ? { x: this.x - 16, y: this.y + 18, anim: 0, dir: -1 } : null;
     }
+    get cx() { return this.x + this.w / 2; }
     isDaytime(game) { const m = game.clock.min % 1440; return m >= 6 * 60 && m < 20 * 60; }
+    talk(text, dur) { this.say = text; this.sayT = dur || 2.4; }
+
+    /** Algo estranho aconteceu perto: espanto, susto ou fuga. Devolve true se a pessoa viu. */
+    react(type, game, x) {
+      if (!this.visibleNow || this.alpha === 0) return false;
+      if (this.kind === 'moto' && this.phase !== 3) return false;
+      this.talk(U.choice(REACT[type] || ['?']), 2.6);
+      this.alert = 1.5;
+      this.facing = x > this.cx ? 1 : -1;
+      this.memory[type] = (this.memory[type] || 0) + 1;
+      if ((type === 'fly' || type === 'teleport' || type === 'hit') && !this.fixed) this.scared = 3.5;
+      else this.stare = 2.5;
+      if (type === 'hit') this.hitT = 0.4;
+      if (this.dog) this.dog.bark = 1;
+      return true;
+    }
+
     update(dt, game) {
       this.t += dt;
       if (this.sayT > 0) this.sayT -= dt;
+      if (this.alert > 0) this.alert -= dt;
+      if (this.hitT > 0) this.hitT -= dt;
       const day = this.isDaytime(game);
       const T = G.TILE;
       this.moving = false;
-      if (this.kind === 'atendente') { this.visibleNow = true; this.facing = 1; return; }
+      if (this.kind === 'atendente' || this.kind === 'porteiro') { this.visibleNow = true; this.facing = this.stare > 0 ? this.facing : 1; if (this.stare > 0) this.stare -= dt; return; }
       this.visibleNow = day;
       if (!day) return;
+      const p = game.player;
+      // susto: foge de V, depois volta para o lugar
+      if (this.scared > 0) {
+        this.scared -= dt;
+        const away = this.cx > p.cx ? 1 : -1;
+        const nx = this.x + away * 70 * dt;
+        if (nx > T * 62 && nx < T * 100) this.x = nx;
+        this.facing = away; this.moving = true; this.anim += dt * 16;
+        if (this.dog) { this.dog.x = U.lerp(this.dog.x, this.x + away * 18, 0.2); this.dog.anim += dt * 20; this.dog.dir = away; }
+        return;
+      }
+      if (this.stare > 0) { this.stare -= dt; this.facing = p.cx > this.cx ? 1 : -1; return; }
       if (this.kind === 'passeador') {
-        // o cachorro puxa: ele vai na frente e a pessoa acompanha
-        const minX = T * 62, maxX = T * 135;
+        // calçada e praça entre os dois prédios (não atravessa paredes)
+        const minX = T * 62, maxX = T * 99;
         if (this.dir === undefined) this.dir = -1;
-        const speed = 34;
-        this.x += this.dir * speed * dt;
+        this.x += this.dir * 34 * dt;
         this.facing = this.dir; this.moving = true;
         if (this.x < minX) { this.x = minX; this.dir = 1; }
         if (this.x > maxX) { this.x = maxX; this.dir = -1; }
-        const dx = this.x + this.dir * 22 + Math.sin(this.t * 3) * 3;
+        const dx = U.clamp(this.x + this.dir * 22 + Math.sin(this.t * 3) * 3, T * 61, T * 101 - 12);
         this.dog.x = U.lerp(this.dog.x, dx, 0.1);
-        this.dog.anim += dt * 12;
-        this.dog.dir = this.dir;
+        this.dog.anim += dt * 12; this.dog.dir = this.dir;
+        if (this.dog.bark > 0) this.dog.bark -= dt;
         this.anim += dt * 9;
       } else if (this.kind === 'moto') {
-        // chega pela rua, sobe na calçada, entrega, vai embora (ciclo)
+        // chega pela rua, sobe na calçada, espera, vai embora (ciclo)
         this.timer -= dt;
-        const curbX = T * 62, startX = T * 79;
-        if (this.phase === 0) { this.x = startX; this.alpha = 0; this.phase = 1; }
+        const curbX = T * 61 + 4, startX = T * 79;
+        if (this.phase === 0) { this.x = startX; this.alpha = 0; this.phase = 1; this.hop = 0; }
         if (this.phase === 1) { this.alpha = Math.min(1, (this.alpha || 0) + dt * 2); this.x -= 70 * dt; this.facing = -1; this.moving = true;
-          if (this.x < T * 64.5) { this.phase = 2; this.timer = 0.4; } }
+          if (this.x < T * 64.5) { this.phase = 2; } }
         else if (this.phase === 2) { this.x -= 50 * dt; this.hop = Math.min(1, (this.hop || 0) + dt * 3); this.moving = true;
-          if (this.x <= curbX) { this.x = curbX; this.phase = 3; this.timer = 6; } }
-        else if (this.phase === 3) { if (this.timer <= 0) { this.phase = 4; this.facing = 1; } }
+          if (this.x <= curbX) { this.x = curbX; this.phase = 3; this.timer = 14; } }
+        else if (this.phase === 3) { if (this.timer <= 0 && !this.waitPlayer) { this.phase = 4; this.facing = 1; } }
         else if (this.phase === 4) { this.x += 60 * dt; this.moving = true; this.facing = 1; if (this.x > T * 64) this.hop = Math.max(0, this.hop - dt * 3);
           if (this.x > startX) { this.alpha = Math.max(0, this.alpha - dt * 2); if (this.alpha <= 0) { this.phase = 5; this.timer = U.rand(18, 30); } } }
         else if (this.phase === 5) { this.alpha = 0; if (this.timer <= 0) this.phase = 0; }
         this.anim += dt * 20;
       } else if (this.kind === 'senhora') {
         this.facing = 1;
-        this.anim = Math.sin(this.t * 1.7); // apalpa a bolsa procurando a chave
+        this.anim = game.story && game.story.flags.senhoraAchou ? 0 : Math.sin(this.t * 1.7);
+      } else if (this.kind === 'crianca') {
+        const pipa = game.propById('pipa');
+        const stuck = pipa && pipa.static;
+        this.facing = stuck ? 1 : (p.cx > this.cx ? 1 : -1);
+        this.anim = stuck ? Math.sin(this.t * 5) : 0; // pula tentando alcançar a pipa
+        if (stuck && Math.random() < dt * 0.15) this.talk(U.choice(['Minha pipa...', 'Desce, pipa!', 'Enganchou de novo...']), 2.2);
       } else if (this.kind === 'casal_a' || this.kind === 'casal_b') {
         this.facing = this.kind === 'casal_a' ? 1 : -1;
+        if (game.story && game.story.flags.casalCalmo) { this.anim = 0; return; }
         this.timer -= dt;
         if (this.timer <= 0) {
           this.timer = U.rand(2.5, 5);
           const lines = this.kind === 'casal_a'
             ? ['Eu disse sábado.', 'Não foi isso que eu falei.', 'Você nunca lembra.', 'Tá, tá bom.']
             : ['Você disse domingo!', 'Foi exatamente isso.', 'Eu lembro, sim.', 'Tá bom nada.'];
-          if (Math.random() < 0.6) { this.say = U.choice(lines); this.sayT = 2.2; }
+          if (Math.random() < 0.6) this.talk(U.choice(lines), 2.2);
         }
         this.anim = Math.sin(this.t * 6) * (this.sayT > 0 ? 1 : 0.2);
       }

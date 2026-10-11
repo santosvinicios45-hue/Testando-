@@ -148,7 +148,7 @@
     const closed = G.TILES[g.world.get(x0, y0)].solid;
     if (closed) {
       if (id === 'porta_padaria' && !G.padariaAberta(g)) { text(g, 'Fechada. Abre às seis.', true); g.audio.play('tick'); return; }
-      if (id === 'alcapao' && !g.inventory.has('chave_terraco')) { text(g, 'Trancado. A chave sumiu há anos.', true); g.audio.play('tick'); return; }
+      if (id === 'alcapao' && !g.inventory.has('chave_terraco') && !(g.story && g.story.flags && g.story.flags.chaveDevolvida)) { text(g, 'Trancado. A chave sumiu há anos.', true); g.audio.play('tick'); return; }
     } else {
       // não fecha em cima de alguém ou de algum objeto
       for (const [cx, cy] of cells) {

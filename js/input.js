@@ -9,28 +9,29 @@
     { id: 'left', label: 'Andar para a esquerda' },
     { id: 'right', label: 'Andar para a direita' },
     { id: 'jump', label: 'Pular' },
-    { id: 'down', label: 'Descer do patamar' },
+    { id: 'down', label: 'Descer (escada / patamar)' },
+    { id: 'run', label: 'Correr (segurar)' },
     { id: 'interact', label: 'Interagir / avançar diálogo' },
-    { id: 'hold', label: 'Segurar (precisão / firmeza)' },
+    { id: 'hold', label: 'Segurar com precisão / firmeza' },
     { id: 'cancel', label: 'Cancelar poder' },
     { id: 'caderno', label: 'Abrir o caderno' },
     { id: 'bolsos', label: 'Abrir os bolsos' },
     { id: 'pause', label: 'Pausar' },
     { id: 'p1', label: 'Poder 1' }, { id: 'p2', label: 'Poder 2' }, { id: 'p3', label: 'Poder 3' },
-    { id: 'p4', label: 'Poder 4' }, { id: 'p5', label: 'Poder 5' }, { id: 'p6', label: 'Poder 6' },
+    { id: 'p4', label: 'Poder 4' }, { id: 'p5', label: 'Poder 5' }, { id: 'p6', label: 'Poder 6' }, { id: 'p7', label: 'Poder 7' },
   ];
 
   G.DEFAULT_BINDINGS = {
     left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], jump: ['KeyW', 'Space', 'ArrowUp'],
-    down: ['KeyS', 'ArrowDown'], interact: ['KeyE', 'Enter'], hold: ['ShiftLeft', 'ShiftRight'],
+    down: ['KeyS', 'ArrowDown'], interact: ['KeyE', 'Enter'], run: ['ShiftLeft', 'ShiftRight'], hold: ['KeyC'],
     cancel: ['KeyQ'], caderno: ['KeyJ', 'Tab'], bolsos: ['KeyI'], pause: ['Escape', 'KeyP'],
-    p1: ['Digit1'], p2: ['Digit2'], p3: ['Digit3'], p4: ['Digit4'], p5: ['Digit5'], p6: ['Digit6'],
+    p1: ['Digit1'], p2: ['Digit2'], p3: ['Digit3'], p4: ['Digit4'], p5: ['Digit5'], p6: ['Digit6'], p7: ['Digit7'],
   };
 
   /** Nome legível de um código de tecla. */
   G.keyName = (code) => {
     if (!code) return '—';
-    const map = { Space: 'Espaço', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', ShiftLeft: 'Shift', ShiftRight: 'Shift dir.', Escape: 'Esc', Enter: 'Enter', Tab: 'Tab', ControlLeft: 'Ctrl', AltLeft: 'Alt', Backspace: '⌫' };
+    const map = { Space: 'Espaço', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', ShiftLeft: 'Shift', ShiftRight: 'Shift dir.', Escape: 'Esc', Enter: 'Enter', Tab: 'Tab', ControlLeft: 'Ctrl', ControlRight: 'Ctrl dir.', AltLeft: 'Alt', Backspace: '⌫' };
     if (map[code]) return map[code];
     if (code.startsWith('Key')) return code.slice(3);
     if (code.startsWith('Digit')) return code.slice(5);

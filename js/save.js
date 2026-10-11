@@ -32,6 +32,7 @@
         player: g.player.serialize(),
         powers: g.powers.serialize(),
         inventory: g.inventory.serialize(),
+        wallet: g.wallet ? g.wallet.serialize() : null,
         props: g.props.filter((p) => !p.removed || !p.dynamic).map((p) => Object.assign(p.serialize(), { removed: p.removed })),
         pickups: g.pickups.map((p) => ({ id: p.id, taken: p.taken })),
         world: g.world.diff(),
@@ -101,6 +102,7 @@
       }
       for (const pk of d.pickups || []) { const p = g.pickups.find((q) => q.id === pk.id); if (p) p.taken = !!pk.taken; }
       g.inventory.applySave(d.inventory);
+      if (g.wallet) g.wallet.applySave(d.wallet);
       g.powers.applySave(d.powers || {});
       g.player.x = d.player.x; g.player.y = d.player.y; g.player.facing = d.player.facing || 1;
       G.Physics.unstick(g.player, g.world);

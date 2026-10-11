@@ -62,6 +62,9 @@ function fakeGame() {
     platformPropsExcept(p) { return this.props.filter((q) => q !== p && q.platform && !q.removed); },
   };
   for (const d of spec.decor) if (d.surfaces) for (const [dx, dy, w] of d.surfaces) g.surfaces.push({ x: d.x + dx, y: d.y + dy, w, h: 2 });
+  g.stairs = spec.stairs;
+  g.npcs = spec.npcs.map((n) => new G.NPC(n));
+  g.wallet = new G.Wallet(10);
   g.player = new G.Player(spec.spawn.x, spec.spawn.y);
   g.powers = new G.PowerSystem(g);
   g.inventory = new G.Inventory(12);
@@ -126,15 +129,45 @@ test('Queda muito rápida não atravessa o chão (sub‑passos)', () => {
   for (let i = 0; i < 60; i++) { g.player.vy = 5000; G.Physics.move(g.player, g.world, { dt: 1 / 20 }); }
   near(g.player.y + g.player.h, TS * 38, 0.001, 'parou na superfície da rua');
 });
-test('Patamar de mão única: atravessa subindo, segura descendo, solta com "descer"', () => {
+test('Escada: W no pé do lance sobe até o andar de cima; S no topo desce', () => {
   const g = fakeGame();
-  g.player.x = TS * 31 + 2; g.player.y = TS * 38 - 26; run(g, 0.2);
-  g.input.keys.hit_jump = true; g.input.keys.jump = true;
-  run(g, 1.2, (i) => { if (i === 1) g.input.keys.hit_jump = false; });
-  near(g.player.y + g.player.h, TS * 36, 0.001, 'em cima do patamar da linha 36');
-  g.input.keys.jump = false;
-  g.input.keys.hit_down = true; run(g, 0.05); g.input.keys.hit_down = false; run(g, 1);
-  near(g.player.y + g.player.h, TS * 38, 0.001, 'desceu para o térreo');
+  const s0 = g.stairs[0];
+  g.player.x = s0.x0; g.player.y = s0.y0 - 26; run(g, 0.2);
+  g.input.keys.hit_jump = true; run(g, 0.05); g.input.keys.hit_jump = false;
+  assert(g.player.stair, 'entrou na escada');
+  g.input.keys.jump = true; run(g, 3); g.input.keys.jump = false; run(g, 0.3);
+  assert(!g.player.stair, 'saiu no topo');
+  near(g.player.y + g.player.h, s0.y1, 0.01, 'pés no 1º andar');
+  assert(!inSolid(g, g.player), 'não está dentro da laje');
+  g.player.x = s0.x1; run(g, 0.2);
+  g.input.keys.hit_down = true; run(g, 0.05); g.input.keys.hit_down = false;
+  assert(g.player.stair && g.player.stair.s === s0, 'entrou no lance de baixo pelo topo');
+  g.input.keys.down = true; run(g, 3); g.input.keys.down = false; run(g, 0.3);
+  near(g.player.y + g.player.h, s0.y0, 0.01, 'voltou ao térreo');
+});
+test('Escada do telhado para no alçapão trancado', () => {
+  const g = fakeGame();
+  const s3 = g.stairs[3];
+  g.player.x = s3.x0; g.player.y = s3.y0 - 26; run(g, 0.2);
+  g.player.enterStair(s3, false);
+  g.input.keys.jump = true; run(g, 4);
+  assert(g.player.stair && g.player.stair.t <= 0.6 + 1e-6, 'barrado pelo alçapão');
+});
+test('Correr é mais rápido que andar', () => {
+  const g = fakeGame();
+  g.player.x = TS * 66; g.player.y = TS * 38 - 26; run(g, 0.2);
+  g.input.keys.right = true; run(g, 0.6); const walk = g.player.vx;
+  g.input.keys.run = true; run(g, 0.6);
+  assert(g.player.vx > walk * 1.4, 'correndo ' + g.player.vx.toFixed(0) + ' vs ' + walk.toFixed(0));
+});
+test('Levantar com animação: deitado → sentado → em pé', () => {
+  const g = fakeGame();
+  g.player.setPose('collapse', TS * 55, TS * 30 - 26, 1);
+  let done = false;
+  g.player.getUp(() => { done = true; });
+  assert(g.player.pose === 'sitFloor', 'primeiro senta');
+  run(g, 1.2);
+  assert(done && !g.player.pose, 'de pé');
 });
 test('Empurrar um caixote andando contra ele', () => {
   const g = fakeGame();
@@ -262,6 +295,45 @@ test('Transformar: colher entorta e desentorta; caixote vira ferro e fica pesado
   const cx = g.propById('caixote1');
   G.Transforms.caixote(g, cx);
   assert(cx.state.metal && cx.mass === 7, 'virou ferro');
+});
+
+test('Criar faz várias comidas e dinheiro; dinheiro vai para a carteira', () => {
+  const g = fakeGame(); const ps = g.powers;
+  ps.unlock('criar', { silent: true });
+  ['maca', 'dinheiro'].forEach((id) => ps.unlockCriavel(id, true));
+  g.say = () => {}; g.flags = {};
+  ps.criarSel = 'maca';
+  G.POWERS.criar.down(ps, g, TS * 55, TS * 30 - 10);
+  assert(g.props.some((p) => p.type === 'maca'), 'maçã criada');
+  ps.criarSel = 'dinheiro';
+  G.POWERS.criar.down(ps, g, TS * 53, TS * 30 - 10);
+  const nota = g.props.find((p) => p.type === 'dinheiro');
+  assert(nota && nota.state.criado, 'nota criada');
+  g.wallet.add(nota.T.money, true);
+  assert(g.wallet.reais === 20 && g.wallet.criado === 10, 'carteira ' + g.wallet.text);
+  assert(g.wallet.pay(4.5) && Math.abs(g.wallet.reais - 15.5) < 1e-9 && !g.wallet.pay(100), 'pagar e recusar sem saldo');
+});
+test('Teleporte leva V a um lugar livre e recusa parede', () => {
+  const g = fakeGame(); const ps = g.powers; ps.unlock('teleporte', { silent: true });
+  run(g, 0.3);
+  const x0 = g.player.x;
+  G.POWERS.teleporte.down(ps, g, TS * 48 + 8, TS * 28);
+  near(g.player.x, x0, 0.01, 'parede recusada');
+  G.POWERS.teleporte.down(ps, g, TS * 45, TS * 29);
+  assert(Math.abs(g.player.x - x0) > 40 && !inSolid(g, g.player), 'teleportou');
+});
+test('O homem do cachorro não atravessa as paredes dos prédios', () => {
+  const g = fakeGame();
+  const n = g.npcs.find((q) => q.kind === 'passeador');
+  let minX = 1e9, maxX = -1e9;
+  for (let i = 0; i < 60 * 120; i++) { n.update(STEP, g); minX = Math.min(minX, n.x, n.dog.x); maxX = Math.max(maxX, n.x + n.w, n.dog.x + 12); }
+  assert(minX >= TS * 61 && maxX <= TS * 102, 'faixa ' + (minX / TS).toFixed(1) + '–' + (maxX / TS).toFixed(1));
+});
+test('Pessoas reagem quando veem um poder (e fogem de voo)', () => {
+  const g = fakeGame();
+  const n = g.npcs.find((q) => q.kind === 'senhora');
+  assert(n.react('levitate', g, n.x + 30) && n.stare > 0 && n.say, 'espanto');
+  assert(n.react('fly', g, n.x + 30) && n.scared > 0, 'fuga');
 });
 
 console.log('Inventário e salvamento');

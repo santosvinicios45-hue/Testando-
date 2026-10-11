@@ -63,6 +63,7 @@
       this.regions = JSON.parse(JSON.stringify(spec.regions));
       this.npcs = spec.npcs.map((s) => new G.NPC(s));
       this.pigeons = spec.pigeons.map((p) => new G.Pigeon(p.x, p.y));
+      this.stairs = spec.stairs || [];
       this.particles = new G.Particles();
       this.renderer.initWorld(this.world);
       this.interactables = G.buildInteractables(this, spec);
@@ -92,7 +93,9 @@
         this.player = new G.Player(this.spec.spawn.x, this.spec.spawn.y);
         this.powers = new G.PowerSystem(this);
         this.inventory = new G.Inventory(12);
+        this.wallet = new G.Wallet(23.5);
         this.story = new G.Story(this);
+        this.setupWitnesses();
         this.state = 'playing';
         this.ui.closeAll();
         this.ui.setHudVisible(true);
@@ -114,7 +117,9 @@
         this.player = new G.Player(this.spec.spawn.x, this.spec.spawn.y);
         this.powers = new G.PowerSystem(this);
         this.inventory = new G.Inventory(12);
+        this.wallet = new G.Wallet(23.5);
         this.story = new G.Story(this);
+        this.setupWitnesses();
         this.state = 'playing';
         this.ui.closeAll();
         this.ui.setHudVisible(true);
@@ -185,18 +190,23 @@
     sleep(day, min, cb) {
       this.ui.fade(G.weekdayOf(day) + ' — dia ' + day, () => {
         this.clock.day = day; this.clock.min = min;
-        this.player.clearPose();
+        const p = this.player;
+        p.clearPose(); p.stair = null; p.dropCarry();
+        // acorda deitado na cama e levanta (sem aparecer em outro lugar)
         const cama = this.decorByType('cama');
-        this.player.x = cama.x + cama.w + 4; this.player.y = TS * 30 - 26; this.player.vx = 0; this.player.vy = 0;
+        p.setPose('sleep', cama.x + 15, cama.y - 26, 1);
         this.flags.abajurGlow = false;
         if (this.powers) this.powers.tension = 0;
         this.renderer.snapCamera();
         this.bus.emit('sleep', { day });
-      }, () => { if (cb) cb(); this.save('auto', true); });
+      }, () => {
+        this.player.locked = true;
+        setTimeout(() => this.player.getUp(() => { this.player.locked = false; if (cb) cb(); this.save('auto', true); }), 500);
+      });
     }
     teleport(pos, label) {
       this.ui.fade('', () => {
-        this.player.clearPose(); this.player.x = pos.x; this.player.y = pos.y; this.player.vx = 0; this.player.vy = 0;
+        this.player.clearPose(); this.player.stair = null; this.player.x = pos.x; this.player.y = pos.y; this.player.vx = 0; this.player.vy = 0;
         if (this.powers) this.powers.cancelAll();
         this.renderer.snapCamera();
       });
@@ -295,6 +305,8 @@
       this.player.update(dt, this);
       this.powers.update(dt);
       for (const p of this.props) p.update(dt, this);
+      this.checkHits();
+      this.checkQuestTriggers();
       if (this.props.some((p) => p.removed && p.dynamic)) this.props = this.props.filter((p) => !(p.removed && p.dynamic));
       for (const n of this.npcs) n.update(dt, this);
       for (const pg of this.pigeons) pg.update(dt, this);
@@ -324,14 +336,16 @@
         return null;
       }
       if (p.type === 'vassoura') return st.stepId === 's1_vassoura' ? 'Pegar a vassoura' : 'Vassoura';
-      if (p.type === 'laranja') return 'Pegar a laranja';
+      if (p.carried) return null;
+      if (p.T.item) return 'Pegar ' + p.T.name.toLowerCase();
+      if (p.T.money) return 'Pegar o dinheiro';
       return null;
     }
     npcLabel(n) {
-      if (!n.visibleNow) return null;
-      if (n.kind === 'atendente') return 'Falar com a atendente';
-      if (n.kind === 'moto') return n.alpha > 0.5 && n.phase === 3 ? 'Observar' : null;
-      return 'Observar';
+      if (!n.visibleNow || n.scared > 0) return null;
+      const names = { atendente: 'Falar com a atendente', porteiro: 'Falar com o porteiro', crianca: 'Falar com o menino', moto: 'Falar com o entregador', senhora: 'Falar com a senhora', passeador: 'Falar com o homem do cachorro', casal_a: 'Falar com o casal', casal_b: 'Falar com o casal' };
+      if (n.kind === 'moto') return n.alpha > 0.5 && n.phase === 3 ? names.moto : null;
+      return names[n.kind] || 'Conversar';
     }
     findInteraction() {
       const p = this.player;
@@ -348,8 +362,12 @@
         if (d < bd) { bd = d; best = Object.assign({ label }, data); }
       };
       for (const q of this.props) if (!q.removed && !(q.hidden && !q.perceived)) consider(q.hitBox(), this.propLabel(q), { kind: 'prop', prop: q, id: q.id }, 12);
+      for (const s of this.stairs) {
+        consider({ x: s.x0 - 4, y: s.y0 - 26, w: 18, h: 26 }, 'Subir a escada (W)', { kind: 'stair', stair: s, top: false, id: s.id + '_b' }, 4);
+        consider({ x: s.x1 - 4, y: s.y1 - 26, w: 18, h: 26 }, 'Descer a escada (S)', { kind: 'stair', stair: s, top: true, id: s.id + '_t' }, 2);
+      }
       for (const pk of this.pickups) if (pk.visible(this)) consider({ x: pk.x - 3, y: pk.y - 3, w: pk.w + 6, h: pk.h + 6 }, pk.item.startsWith('registro') ? 'Ler o papel' : 'Pegar', { kind: 'pickup', pickup: pk, id: pk.id }, 12);
-      for (const n of this.npcs) consider({ x: n.x, y: n.y, w: n.w, h: n.h }, this.npcLabel(n), { kind: 'npc', npc: n, id: n.id }, 6);
+      for (const n of this.npcs) consider({ x: n.x - 6, y: n.y, w: n.w + 12, h: n.h }, this.npcLabel(n), { kind: 'npc', npc: n, id: n.id }, 6);
       for (const it of this.interactables) {
         if (!it.enabled) continue;
         const label = typeof it.label === 'function' ? it.label(this) : it.label;
@@ -369,6 +387,8 @@
         if (G.ITEMS[pk.item]) { this.inventory.add(pk.item); this.ui.toast(G.ITEMS[pk.item].name + ' foi para os bolsos.', 'item'); }
         this.audio.play('pickup');
         this.bus.emit('pickup', { item: pk.item, id: pk.id });
+      } else if (c.kind === 'stair') {
+        this.player.enterStair(c.stair, c.top);
       } else if (c.kind === 'npc') {
         this.npcInteract(c.npc);
       } else if (c.kind === 'static') {
@@ -378,29 +398,187 @@
     }
 
     defaultPropAction(p) {
-      if (p.type === 'laranja') {
-        if (this.inventory.add('laranja_perfeita') === 0) { p.removed = true; this.audio.play('pickup'); this.ui.toast('Laranja perfeita foi para os bolsos (I).', 'item'); }
+      if (p.T.money) {
+        p.removed = true; this.wallet.add(p.T.money, !!p.state.criado); this.audio.play('pickup');
+        this.ui.toast('+ R$ ' + p.T.money + ',00 na carteira (' + this.wallet.text + ').', 'item');
+        return;
+      }
+      if (p.T.item) {
+        if (this.inventory.add(p.T.item) === 0) { p.removed = true; this.audio.play('pickup'); this.ui.toast(p.T.name + ' foi para os bolsos (I).', 'item'); }
         else this.bubble('Os bolsos estão cheios.', 1.5, true);
       } else if (p.type === 'vassoura') this.bubble('Atrás da porta do banheiro, onde ele nunca lembrava de guardá-la direito.', 3);
     }
 
-    npcInteract(n) {
-      if (n.kind === 'atendente') {
-        const st = this.story;
-        if (!G.padariaAberta(this)) { this.bubble('A padaria está fechando.', 1.5, true); return; }
-        const today = st.flags.paoDia === this.clock.day;
-        this.say([{ who: 'Atendente', orig: true, text: today ? 'De novo? Ainda tem pão quentinho.' : 'Bom dia! Vai querer o quê?', choices: [
-          { text: 'Um pão francês.', orig: true, fn: () => {
-            if (this.inventory.add('pao_frances') === 0) { st.flags.paoDia = this.clock.day; this.ui.toast('Pão francês foi para os bolsos.', 'item'); this.say([{ who: 'Atendente', orig: true, text: 'Tá aqui. Bom dia pra você!' }, { who: 'pensamento', orig: true, text: 'Comprar pão. Parece uma vitória enorme. E é patético perceber isso.' }]); }
-            else this.say([{ who: 'Atendente', orig: true, text: 'Seus bolsos estão cheios, moço.' }]);
-          } },
-          { text: 'Só olhando, obrigado.', orig: true, fn: () => this.say([{ who: 'Atendente', orig: true, text: 'Fica à vontade.' }]) },
-        ] }]);
-        return;
+    /* ---------------- testemunhas (conteúdo original do jogo) ---------------- */
+    setupWitnesses() {
+      const at = (d) => {
+        if (d.prop) return { x: d.prop.cx, y: d.prop.cy };
+        if (d.x !== undefined) return { x: d.x, y: d.y };
+        return { x: this.player.cx, y: this.player.cy };
+      };
+      const map = { 'levitate:start': 'levitate', 'prop:break': 'break', create: 'create', deslocar: 'deslocar', teleport: 'teleport', fly: 'fly', 'restore:start': 'restore' };
+      for (const ev of Object.keys(map)) this.bus.on(ev, (d) => this.witness(map[ev], at(d || {})));
+    }
+    /** Quem estiver perto e no mesmo ambiente vê o que V fez — e reage. */
+    witness(type, pos) {
+      if (!this.story || this.state !== 'playing') return;
+      const area = this.world.areaAt(pos.x, pos.y);
+      let seen = 0;
+      for (const n of this.npcs) {
+        if (!n.visibleNow) continue;
+        const na = this.world.areaAt(n.cx, n.y + 10);
+        const sameSpace = (area && na && area.id === na.id) || (area && na && !area.indoor && !na.indoor);
+        if (!sameSpace) continue;
+        if (Math.abs(n.cx - pos.x) > 150 || Math.abs(n.y + 13 - pos.y) > 60) continue;
+        if (n.react(type, this, pos.x)) seen++;
       }
-      const key = n.kind.startsWith('casal') ? 'casal' : n.kind;
-      this.bubble(NPC_TEXT[key], 4, key !== 'casal');
-      this.bus.emit('observe', { id: key });
+      if (!seen) return;
+      const st = this.story;
+      st.flags.testemunhas = (st.flags.testemunhas || 0) + seen;
+      if (!st.flags.primeiraTestemunha) {
+        st.flags.primeiraTestemunha = true;
+        this.bubble('Alguém viu.', 2.2, true);
+        st.registro('testemunhas', 'Alguém viu', 'A primeira vez que alguém viu uma coisa impossível acontecer perto de V. Ninguém sabe que foi ele. Ainda. Cada pessoa que vê é uma pergunta a mais solta no mundo.', true);
+      }
+      this.bus.emit('witness', { type, count: seen });
+    }
+
+    /** Objetos arremessados acertam pessoas. */
+    checkHits() {
+      for (const p of this.props) {
+        if (p.removed || p.broken || p.held || p.carried) continue;
+        const sp = Math.hypot(p.vx, p.vy);
+        if (sp < 140) continue;
+        for (const n of this.npcs) {
+          if (!n.visibleNow || n.hitT > 0 || (n.kind === 'moto' && n.phase !== 3)) continue;
+          if (!U.overlap(p, { x: n.x, y: n.y, w: n.w, h: n.h })) continue;
+          p.vx *= -0.3; p.vy = -60;
+          n.react('hit', this, p.cx);
+          this.audio.play('thud', 0.6);
+          this.story.flags.acertouAlguem = (this.story.flags.acertouAlguem || 0) + 1;
+          this.bus.emit('npc:hit', { id: n.id });
+        }
+      }
+    }
+
+    /** Gatilhos de missões que dependem de posição (pipa, chave da senhora). */
+    checkQuestTriggers() {
+      const st = this.story, ps = this.powers;
+      const kid = this.npcs.find((n) => n.kind === 'crianca');
+      const pipa = this.propById('pipa');
+      if (kid && pipa && !pipa.static && !pipa.held && !st.flags.pipaDevolvida && kid.visibleNow && U.dist(pipa.cx, pipa.cy, kid.cx, kid.y + 10) < 40 && !st.dialog.active) {
+        st.flags.pipaDevolvida = true;
+        st.activateSide('pipa'); st.progressSide('pipa', 'descer');
+        this.kidReturn(kid, pipa);
+      }
+      const sra = this.npcs.find((n) => n.kind === 'senhora');
+      if (sra && ps && ps.perceive && sra.visibleNow && !st.flags.viuChaveSenhora && st.side.chave_senhora && U.dist(ps.perceive.x, ps.perceive.y, sra.x + 8, sra.y + 15) < 26) {
+        st.flags.viuChaveSenhora = true; st.progressSide('chave_senhora', 'ver');
+        this.bubble('Lá está: no bolsinho de dentro, do lado do zíper.', 3, true);
+      }
+    }
+
+    kidReturn(kid, pipa) {
+      pipa.removed = true;
+      const st = this.story;
+      kid.stare = 3;
+      const fim = (k) => {
+        st.flags.pipaResposta = k;
+        st.progressSide('pipa', 'conversa');
+        st.registro('pipa', 'A pipa do menino', { mentira: 'Disse que foi o vento. O menino olhou para a árvore, para o céu parado, e não acreditou.', verdade: 'Disse a verdade: "fui eu". O menino achou a coisa mais incrível do mundo — e vai contar para todo mundo.', nada: 'Não disse nada. Entregou a pipa e foi embora. O menino ficou olhando.' }[k], true);
+      };
+      this.say([{ who: 'Menino', orig: true, text: 'MINHA PIPA! Ela desceu sozinha?! Moço, como ela desceu?', choices: [
+        { text: '"Foi o vento."', orig: true, fn: () => { fim('mentira'); this.say([{ who: 'Menino', orig: true, text: 'Que vento? Não tá ventando nada... Bom, obrigado.' }]); } },
+        { text: '"Fui eu. Com a cabeça."', orig: true, fn: () => { fim('verdade'); this.story.flags.testemunhas = (this.story.flags.testemunhas || 0) + 1; this.say([{ who: 'Menino', orig: true, text: 'MENTIRA! Faz de novo! Faz de novo! Eu vou contar pra minha mãe!' }, { who: 'pensamento', orig: true, text: 'Talvez não tenha sido a melhor ideia.' }]); } },
+        { text: 'Entregar a pipa sem dizer nada.', orig: true, fn: () => { fim('nada'); this.say([{ who: 'Menino', orig: true, text: '...valeu.' }]); } },
+      ] }]);
+      this.inventory && this.audio.play('success');
+    }
+
+    npcInteract(n) {
+      const st = this.story, f = st.flags;
+      const observe = (key) => ({ text: 'Só observar.', orig: true, fn: () => { this.bubble(NPC_TEXT[key], 4, key !== 'casal'); this.bus.emit('observe', { id: key }); } });
+      const bye = (t) => ({ text: t || 'Nada não. Até mais.', orig: true });
+      const saw = Object.keys(n.memory).length > 0;
+      n.stare = 1.5;
+      const who = { atendente: 'Atendente', porteiro: 'Seu Valdir (porteiro)', crianca: 'Menino', moto: 'Entregador', senhora: 'Senhora', passeador: 'Homem do cachorro', casal_a: 'Casal', casal_b: 'Casal' }[n.kind];
+      const S = (text, choices) => ({ who, orig: true, text, choices });
+      switch (n.kind) {
+        case 'atendente': return this.bakery(n);
+        case 'porteiro': {
+          const ch = [{ text: 'Alguma novidade no prédio?', orig: true, fn: () => this.say([S(f.chaveDevolvida ? 'Novidade é o terraço aberto de novo, graças a você. O resto é o de sempre: o do 31 arrastando coisa às onze da noite.' : 'Novidade nenhuma. Só a chave do terraço, que sumiu faz anos. Acho que caiu atrás das caixas de correio quando trocaram os painéis.')]) }];
+          if (this.inventory.has('pacote')) ch.unshift({ text: 'Chegou isso pro 32.', orig: true, fn: () => { this.inventory.remove('pacote'); this.wallet.add(5); st.progressSide('entrega', 'resolver'); this.say([S('Pro 32? Tá vazio desde março. Deixa que eu resolvo com a transportadora. Toma, pelo trabalho.'), { who: 'narr', orig: true, text: 'Seu Valdir deu cinco reais. V tentou recusar. Não conseguiu.' }]); } });
+          if (this.inventory.has('chave_terraco') && !f.chaveDevolvida) ch.unshift({ text: 'Achei a chave do terraço.', orig: true, fn: () => {
+            f.chaveDevolvida = true; this.inventory.remove('chave_terraco');
+            for (const x of [32, 33, 34]) if (G.TILES[this.world.get(x, 22)].solid) this.world.set(x, 22, G.T.HATCH_O);
+            this.wallet.add(20);
+            this.say([S('Não acredito! Onde tava? ... Atrás das caixas? Eu falei! Vou deixar o alçapão destrancado de vez. E isso aqui é pra você, não discute.'), { who: 'narr', orig: true, text: 'Vinte reais e um tapinha no ombro.' }]);
+          } });
+          ch.push(bye('Bom dia, seu Valdir.'));
+          return this.say([S(saw ? 'Seu V... o senhor viu umas coisas estranhas acontecendo por aqui? Eu tô ficando velho.' : (f.porteiroOi ? 'E aí, seu V. Precisando de alguma coisa?' : 'Bom dia, seu V! Sumido, hein? Faz dias que não desce.'), ch)], () => { f.porteiroOi = true; });
+        }
+        case 'crianca': {
+          const pipa = this.propById('pipa');
+          if (pipa && pipa.static) return this.say([S('Moço, minha pipa enganchou lá em cima da árvore. Meu pai disse que agora só com escada.', [
+            { text: 'Vou ver o que dá pra fazer.', orig: true, fn: () => { st.activateSide('pipa'); this.bubble('Uma pipa presa num galho. Sem escada. Hm.', 2.5, true); } }, bye('Que pena.')])]);
+          const r = f.pipaResposta;
+          return this.say([S(r === 'verdade' ? 'Faz de novo! Faz a pipa voar sem vento!' : r === 'mentira' ? 'Ainda não acredito nesse vento aí.' : 'Valeu pela pipa, moço!', [bye('Vai brincar.')])]);
+        }
+        case 'moto': {
+          if (st.side.entrega && st.side.entrega.state === 'done') return this.say([S('Valeu de novo, mano!', [bye()])]);
+          n.waitPlayer = true;
+          st.activateSide('entrega');
+          const ch = [];
+          if (f.viu32) ch.push({ text: '"O 32 está vazio. Só caixa e poeira."', orig: true, fn: () => { st.progressSide('entrega', 'resolver'); n.waitPlayer = false; n.timer = 3; this.say([S('Sério? Então vou devolver. Tu salvou meu dia, valeu!')]); } });
+          ch.push({ text: '"Deixa comigo, eu entrego pro porteiro."', orig: true, fn: () => { this.inventory.add('pacote'); n.waitPlayer = false; n.timer = 3; this.ui.toast('Pacote do 32 foi para os bolsos.', 'item'); this.say([S('Show! Valeu!')]); } });
+          ch.push({ text: '"Não sei, não."', orig: true, fn: () => { n.waitPlayer = false; } });
+          return this.say([S(saw ? 'Mano, tu viu aquilo agora? ...Enfim. Sabe se tem alguém no 32? Ninguém atende o interfone.' : 'E aí! Sabe se tem alguém no 32? Ninguém atende o interfone.', ch)]);
+        }
+        case 'senhora': {
+          if (f.senhoraAchou) return this.say([S('Achei, meu filho, achei! Você é um anjo.', [bye('De nada.')])]);
+          const ch = [{ text: 'A senhora perdeu alguma coisa?', orig: true, fn: () => { st.activateSide('chave_senhora'); this.say([S('A chave de casa. Eu já olhei a bolsa três vezes. Ela some lá dentro.')]); } }];
+          if (f.viuChaveSenhora) ch.unshift({ text: '"Está no bolsinho de dentro, do lado do zíper."', orig: true, fn: () => {
+            f.senhoraAchou = true; st.progressSide('chave_senhora', 'contar'); this.inventory.add('bala', 2);
+            this.say([S('...Está aqui! Como é que você sabia?', [
+              { text: '"Chute."', orig: true, fn: () => this.say([S('Que chute bom! Toma uma bala. Toma duas.')]) },
+              { text: '"Eu vi."', orig: true, fn: () => { f.testemunhas = (f.testemunhas || 0) + 1; this.say([S('Viu? Através da bolsa? ...Ah, esses jovens e as piadas. Toma uma bala.')]); } },
+            ])]);
+          } });
+          ch.push(observe('senhora'), bye());
+          return this.say([S(saw ? 'Ai, menino, eu vi uma coisa... deixa pra lá, ninguém ia acreditar. Ai, a minha chave...' : 'Ai, meu filho... eu sempre acho que esqueci a chave.', ch)]);
+        }
+        case 'passeador':
+          return this.say([S(saw ? 'Rapaz, você viu? Uma coisa ficou voando ali. O Pipoca latiu feito doido.' : 'Bom dia! Ele puxa, mas é manso. Chama Pipoca.', [
+            { text: 'Fazer carinho no Pipoca.', orig: true, fn: () => { n.dog.bark = 1; this.bubble('O rabo do Pipoca vira um ventilador.', 2.5, true); f.carinhoPipoca = true; } },
+            observe('passeador'), bye('Bom passeio.')])]);
+        case 'casal_a': case 'casal_b':
+          if (f.casalCalmo) return this.say([S('A gente ainda tá rindo daquilo. Obrigado, viu?', [bye()])]);
+          return this.say([S('Desculpa... a gente tá falando alto?', [
+            { text: '"Tá tudo bem."', orig: true, fn: () => this.say([S('Ufa. É que ele não lembra de nada que combina.')]) },
+            { text: '"Vocês dois estão certos, sabia?"', orig: true, fn: () => { f.casalCalmo = true; this.bus.emit('casal:calmo', {}); this.say([S('...Os dois? Como assim os dois? — e os dois começam a rir.')]); } },
+            observe('casal'), bye()])]);
+        default: return null;
+      }
+    }
+
+    /** Padaria (conteúdo original do jogo): compra com a carteira de V. */
+    bakery(n) {
+      if (!G.padariaAberta(this)) { this.bubble('A padaria está fechando.', 1.5, true); return; }
+      const st = this.story;
+      const item = (id, price, name) => ({ text: name + ' — R$ ' + price.toFixed(2).replace('.', ','), orig: true, fn: () => {
+        if (!this.wallet.pay(price)) { this.say([{ who: 'Atendente', orig: true, text: 'Ih, não deu. Tá faltando dinheiro aí, moço.' }]); return; }
+        if (this.inventory.add(id) !== 0) { this.wallet.add(price); this.say([{ who: 'Atendente', orig: true, text: 'Seus bolsos estão cheios, moço.' }]); return; }
+        const suspeita = this.wallet.criado > 0 && Math.random() < 0.35;
+        if (suspeita) st.flags.notaSuspeita = (st.flags.notaSuspeita || 0) + 1;
+        const lines = [{ who: 'Atendente', orig: true, text: suspeita ? 'Nossa... essa nota tá novinha demais. Parece que saiu da gráfica agora. Bom, tá aqui.' : 'Tá aqui. Bom dia pra você!' }];
+        if (!st.flags.primeiroPao && id === 'pao_frances') { st.flags.primeiroPao = true; lines.push({ who: 'pensamento', orig: true, text: 'Comprar pão. Parece uma vitória enorme. E é patético perceber isso.' }); }
+        this.say(lines);
+        this.bus.emit('buy', { item: id });
+      } });
+      this.say([{ who: 'Atendente', orig: true, text: 'Bom dia! Vai querer o quê? (você tem ' + this.wallet.text + ')', choices: [
+        item('pao_frances', 1, 'Pão francês'), item('cafe', 4.5, 'Café'), item('sonho', 5, 'Sonho'),
+        { text: 'Só olhando, obrigado.', orig: true, fn: () => this.say([{ who: 'Atendente', orig: true, text: 'Fica à vontade.' }]) },
+      ] }]);
     }
   }
   G.Game = Game;

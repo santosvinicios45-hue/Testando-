@@ -65,10 +65,17 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await step() === 's1_vassoura', 'passa para a vassoura');
   await place(16 * 41 + 2, 16 * 30 - 26);
   await pressE();
+  ok(await ev(() => VG.game.player.carry && VG.game.player.carry.id === 'vassoura'), 'V pega a vassoura e carrega');
+  const shard = await ev(() => VG.game.propById('copo').cx);
+  await place(shard - 8, 16 * 30 - 26);
+  ok(await waitFor(() => VG.game.player.sweepT > 0, 2000), 'V começa a varrer os cacos');
+  await shot('p02b-varrendo');
+  await waitFor(() => VG.game.story.dialog.active, 4000);
   await drain();
   ok(await waitFor(() => !VG.game.propById('copo').broken && !VG.game.propById('copo').restoring, 4000), 'o copo é restaurado (involuntariamente)');
+  ok(await ev(() => !VG.game.player.carry && Math.abs(VG.game.propById('vassoura').x - VG.game.propById('vassoura').spawn.x) < 1), 'a vassoura volta para trás da porta (como no livro)');
   await drain();
-  ok(await step() === 's1_sobe', 'passa para Sobe/Desce');
+  ok(await waitFor(() => VG.game.story.stepId === 's1_sobe', 3000), 'V levanta do chão e passa para Sobe/Desce');
   ok(await ev(() => VG.game.powers.isUnlocked('restaurar') && VG.game.powers.isUnlocked('levitar')), 'Restaurar e Levitar desbloqueados');
 
   // Levitar com o mouse: segurar sobre o copo, subir, descer na pia
@@ -226,6 +233,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   ok(await ev(() => VG.game.ui.modal === 'endcard'), 'tela de fim da etapa');
   await shot('p08-fim');
   await page.click('#endcard button[data-act="close-panel"]'); await wait(100);
+  await wait(200); await drain();
 
   console.log('Exploração, missões secundárias e salvamento');
   // sair pela porta do apartamento até a rua
@@ -263,14 +271,72 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   await place(16 * 44 + 2, 16 * 38 - 26);
   await pressE();
   ok(await ev(() => VG.game.inventory.has('chave_terraco')), 'pegou a chave do terraço');
-  await place(16 * 33, 16 * 24 - 26);
-  await wait(100);
+  // sobe a escada de verdade do 3º andar até o alçapão
+  await ev(() => { const g = VG.game, s = g.stairs[3]; g.player.clearPose(); g.player.x = s.x0; g.player.y = s.y0 - 26; g.renderer.snapCamera(); });
+  await wait(150);
+  await page.keyboard.press('KeyW'); await wait(50);
+  ok(await ev(() => !!VG.game.player.stair), 'entrou no último lance da escada com W');
+  await page.keyboard.down('KeyW'); await wait(1600); await page.keyboard.up('KeyW');
+  ok(await ev(() => VG.game.player.stair && VG.game.player.stair.t <= 0.61), 'parou no alçapão trancado');
+  await shot('p09b-escada');
   await pressE();
   ok(await ev(() => !VG.TILES[VG.game.world.get(33, 22)].solid), 'alçapão abre com a chave');
+  await page.keyboard.down('KeyW'); await wait(1500); await page.keyboard.up('KeyW');
+  ok(await ev(() => !VG.game.player.stair && VG.game.player.y + 26 <= 16 * 22 + 1), 'chegou ao telhado pela escada');
   await place(16 * 40 - 2, 16 * 22 - 26);
   await pressE();
   ok(await ev(() => VG.game.story.side.terraco && VG.game.story.side.terraco.state === 'done'), 'segredo do telhado concluído');
   await shot('p10-telhado');
+
+  console.log('Novidades: padaria, porteiro, pipa, Criar, voo e teleporte');
+  // padaria: comprar pão com a carteira
+  await ev(() => { VG.game.clock.min = 10 * 60; VG.game.interactables.find((i) => i.id === 'porta_padaria').action(VG.game); });
+  await place(16 * 109, 16 * 38 - 26);
+  const money0 = await ev(() => VG.game.wallet.reais);
+  await pressE();
+  await waitFor(() => VG.game.story.dialog.active, 2000);
+  await drain(0);
+  ok(await ev((m) => VG.game.inventory.has('pao_frances') && Math.abs(VG.game.wallet.reais - (m - 1)) < 1e-6, money0), 'comprou um pão francês por R$ 1,00');
+  // porteiro
+  await place(16 * 53 + 2, 16 * 38 - 26);
+  await ev(() => { VG.game.player.facing = 1; });
+  await pressE();
+  ok(await ev(() => VG.game.story.dialog.active && /Valdir/.test(VG.game.story.dialog.current.who)), 'conversa com o porteiro');
+  await drain(0);
+  ok(await ev(() => VG.game.story.flags.chaveDevolvida && VG.game.wallet.reais > 20), 'devolveu a chave ao porteiro e ganhou gorjeta');
+  // pipa: levitar até o menino
+  await place(16 * 86, 16 * 38 - 26);
+  await selectPower(1);
+  const pipa = await propCenter('pipa');
+  const kid = await ev(() => { const n = VG.game.npcs.find((q) => q.kind === 'crianca'); return { x: n.cx, y: n.y + 6 }; });
+  let pa = await toClient(pipa.x, pipa.y);
+  await page.mouse.move(pa.x, pa.y); await page.mouse.down();
+  for (let i = 1; i <= 10; i++) { const t = await toClient(pipa.x + (kid.x + 14 - pipa.x) * i / 10, pipa.y + (kid.y - pipa.y) * i / 10); await page.mouse.move(t.x, t.y); await wait(50); }
+  await wait(300); await page.mouse.up(); await page.mouse.click(pa.x, pa.y, { button: 'right' });
+  ok(await waitFor(() => VG.game.story.flags.pipaDevolvida, 4000), 'pipa trazida até o menino');
+  await drain(1);
+  ok(await ev(() => VG.game.story.flags.pipaResposta === 'verdade'), 'escolha registrada (contou a verdade)');
+  // Criar: trocar para maçã com botão direito e criar
+  await selectPower(5);
+  const cm = await toClient(16 * 84, 16 * 38 - 20);
+  await page.mouse.move(cm.x, cm.y); await page.mouse.click(cm.x, cm.y, { button: 'right' }); await wait(80);
+  ok(await ev(() => VG.game.powers.criarSel !== 'laranja'), 'botão direito troca o que Criar faz');
+  await page.mouse.click(cm.x, cm.y); await wait(100);
+  ok(await ev(() => VG.game.props.some((p) => p.dynamic && p.type !== 'laranja')), 'criou outra comida');
+  // voo livre fora do prédio
+  await place(16 * 75, 16 * 38 - 26);
+  await page.keyboard.down('KeyW'); await wait(1000);
+  const flyY = await ev(() => VG.game.player.y);
+  await page.keyboard.up('KeyW');
+  ok(flyY < 16 * 38 - 26 - 70, 'voa lá fora (subiu ' + Math.round(16 * 38 - 26 - flyY) + ' px)');
+  await wait(1500);
+  // teleporte
+  await selectPower(7);
+  const tx = await toClient(16 * 70, 16 * 38 - 13);
+  const before0 = await ev(() => VG.game.player.x);
+  await page.mouse.click(tx.x, tx.y); await wait(100);
+  ok(await ev((b) => Math.abs(VG.game.player.x - b) > 40, before0), 'teleporte de V funciona');
+  await shot('p11-novidades');
 
   // salvar, alterar, carregar
   await page.keyboard.press('Escape'); await wait(100);

@@ -29,7 +29,18 @@
     exausto: { label: 'Exausto', relax: 0.8, cost: 1.2, color: '#9aa5b1' },
   };
 
-  G.POWER_ORDER = ['levitar', 'restaurar', 'deslocar', 'transformar', 'criar', 'perceber'];
+  G.POWER_ORDER = ['levitar', 'restaurar', 'deslocar', 'transformar', 'criar', 'perceber', 'teleporte'];
+
+  /** O que o poder Criar consegue fazer existir. A laranja é do romance; o resto é extensão original. */
+  G.CRIAVEIS = [
+    { id: 'laranja', name: 'Laranja', cost: 14 },
+    { id: 'maca', name: 'Maçã', cost: 14 },
+    { id: 'banana', name: 'Banana', cost: 14 },
+    { id: 'pao', name: 'Pão', cost: 16 },
+    { id: 'cafe', name: 'Café', cost: 18 },
+    { id: 'chocolate', name: 'Chocolate', cost: 16 },
+    { id: 'dinheiro', name: 'Dinheiro (R$ 10)', cost: 30 },
+  ];
 
   /* ---------------- transformações por tipo de objeto ---------------- */
   G.Transforms = {
@@ -73,6 +84,22 @@
       this.hover = null;
       this.lastAim = null;
       this.vooInstavel = false;
+      this.vooLivre = false;
+      this.criaveis = new Set(['laranja']);
+      this.criarSel = 'laranja';
+    }
+    unlockCriavel(id, silent) {
+      if (this.criaveis.has(id)) return;
+      this.criaveis.add(id);
+      const c = G.CRIAVEIS.find((q) => q.id === id);
+      if (!silent && c) this.game.ui.toast('Criar agora também faz: ' + c.name + ' (botão direito troca o que criar).', 'power');
+    }
+    cycleCriar() {
+      const list = G.CRIAVEIS.filter((c) => this.criaveis.has(c.id));
+      const i = list.findIndex((c) => c.id === this.criarSel);
+      this.criarSel = list[(i + 1) % list.length].id;
+      this.game.audio.play('ui');
+      this.game.bubble('Criar: ' + list[(i + 1) % list.length].name, 1.2);
     }
     get capacity() { return 100 + 8 * this.compreensao; }
     get ratio() { return this.tension / this.capacity; }
@@ -143,7 +170,7 @@
 
       // seleção
       if (can) {
-        for (let i = 0; i < 6; i++) if (inp.hit('p' + (i + 1))) this.select(G.POWER_ORDER[i]);
+        for (let i = 0; i < 7; i++) if (inp.hit('p' + (i + 1))) this.select(G.POWER_ORDER[i]);
         if (inp.mouse.wheel) this.cycle(inp.mouse.wheel > 0 ? 1 : -1);
         if (inp.hit('cancel')) this.cancelAll();
       }
@@ -196,7 +223,7 @@
     }
 
     serialize() {
-      return { unlocked: [...this.unlocked], selected: this.selected, tension: Math.round(this.tension), emotion: this.emotion, compreensao: this.compreensao, blocked: [...this.blockedRegions], vooInstavel: this.vooInstavel };
+      return { unlocked: [...this.unlocked], selected: this.selected, tension: Math.round(this.tension), emotion: this.emotion, compreensao: this.compreensao, blocked: [...this.blockedRegions], vooInstavel: this.vooInstavel, vooLivre: this.vooLivre, criaveis: [...this.criaveis], criarSel: this.criarSel };
     }
     applySave(d) {
       this.unlocked = new Set((d.unlocked || []).filter((id) => G.POWERS[id]));
@@ -206,6 +233,10 @@
       this.compreensao = d.compreensao || 0;
       this.blockedRegions = new Set(d.blocked || []);
       this.vooInstavel = !!d.vooInstavel;
+      this.vooLivre = !!d.vooLivre;
+      this.criaveis = new Set((d.criaveis || ['laranja']).filter((id) => G.CRIAVEIS.some((c) => c.id === id)));
+      if (!this.criaveis.size) this.criaveis.add('laranja');
+      this.criarSel = this.criaveis.has(d.criarSel) ? d.criarSel : 'laranja';
     }
   }
   G.PowerSystem = PowerSystem;
@@ -220,7 +251,7 @@
   G.POWERS.levitar = {
     id: 'levitar', name: 'Levitar', key: '1', color: '#9fd8ff',
     hint: 'segure o botão esquerdo sobre um objeto e arraste; solte para arremessar, botão direito para pousar.',
-    desc: 'Erguer, puxar, empurrar e arremessar objetos. Shift segura com precisão. Custo contínuo, maior para objetos pesados.',
+    desc: 'Erguer, puxar, empurrar e arremessar objetos. C segura com precisão. Custo contínuo, maior para objetos pesados.',
     hover(ps, g, x, y) { const p = ps.propAt(x, y, (q) => q.grabbable); return p && ps.inRange(p.cx, p.cy) ? p : null; },
     down(ps, g, x, y) {
       if (ps.held) return;
@@ -364,22 +395,56 @@
   G.POWERS.criar = {
     id: 'criar', name: 'Criar', key: '5', color: '#ffa94d',
     hint: 'clique num espaço livre para fazer uma laranja aparecer.',
-    desc: 'Faz coisas existirem. Por enquanto V só consegue a laranja — perfeita demais. Outras criações virão com a compreensão.',
+    desc: 'Faz coisas existirem. Começa pela laranja perfeita demais; depois outras comidas e até dinheiro. Botão direito troca o que criar.',
     target(ps, g, x, y) {
-      const T = G.PropTypes.laranja;
+      const T = G.PropTypes[ps.criarSel] || G.PropTypes.laranja;
       const r = { x: Math.round(x - T.w / 2), y: Math.round(y - T.h / 2), w: T.w, h: T.h };
       return { r, ok: g.world.rectFree(r) && ps.inRange(x, y) };
     },
+    alt(ps) { ps.cycleCriar(); },
     down(ps, g, x, y) {
       const t = this.target(ps, g, x, y);
       if (!t.ok) { g.bubble('Ali não.', 1); return; }
-      const n = g.props.filter((p) => p.type === 'laranja' && !p.removed).length;
-      if (n >= 6) { g.bubble('Já tem laranja demais por aqui.', 1.6); return; }
-      const p = g.addProp({ type: 'laranja', x: t.r.x, y: t.r.y, dynamic: true });
+      const n = g.props.filter((p) => p.dynamic && !p.removed).length;
+      if (n >= 10) { g.bubble('Já tem coisa criada demais por aqui.', 1.6); return; }
+      const c = G.CRIAVEIS.find((q) => q.id === ps.criarSel) || G.CRIAVEIS[0];
+      const p = g.addProp({ type: c.id, x: t.r.x, y: t.r.y, dynamic: true });
+      p.state.criado = true;
       g.particles.burst(p.cx, p.cy, 16, { color: '#ffb347', speed: 35, life: 0.6 });
       g.audio.play('create');
-      ps.cost(14);
-      g.bus.emit('create', { prop: p });
+      ps.cost(c.cost);
+      if (c.id === 'dinheiro' && !g.flags.dinheiroCriadoMsg) {
+        g.flags.dinheiroCriadoMsg = true;
+        g.say([{ who: 'pensamento', orig: true, text: 'Uma nota de dez. Novinha. Perfeita demais, como a laranja. De onde é que ela saiu — e de quem eu acabei de tirar o valor dela?' }]);
+      }
+      g.bus.emit('create', { prop: p, kind: c.id });
+    },
+  };
+
+  // ---------------- Teleporte (extensão original desta versão; no romance V atravessa a cidade "num pensamento") ----------------
+  G.POWERS.teleporte = {
+    id: 'teleporte', name: 'Teleporte', key: '7', color: '#ff7ad9',
+    hint: 'clique num lugar livre ao alcance: V aparece lá sem percorrer o caminho.',
+    desc: 'O mesmo que fez com o controle remoto, agora consigo mesmo. O destino precisa estar livre e ao alcance. Quem vir, vai se assustar.',
+    target(ps, g, x, y) {
+      const p = g.player;
+      const r = { x: Math.round(x - p.w / 2), y: Math.round(y - p.h / 2), w: p.w, h: p.h };
+      let ok = g.world.rectFree(r) && ps.inRange(x, y);
+      if (ok) for (const q of g.props) if (!q.removed && (q.solid || q.platform) && U.overlap(r, q)) { ok = false; break; }
+      return { r, ok };
+    },
+    down(ps, g, x, y) {
+      const t = this.target(ps, g, x, y);
+      if (!t.ok) { g.bubble('Ali não cabe.', 1); g.audio.play('tick'); return; }
+      const p = g.player;
+      const fromX = p.cx, fromY = p.cy;
+      const dist = U.dist(fromX, fromY, t.r.x + p.w / 2, t.r.y + p.h / 2);
+      g.particles.burst(fromX, fromY, 22, { color: '#ff7ad9', speed: 60, life: 0.5 });
+      p.x = t.r.x; p.y = t.r.y; p.vx = 0; p.vy = 0; p.stair = null;
+      g.particles.burst(p.cx, p.cy, 22, { color: '#ffd1f2', speed: 45, life: 0.5 });
+      g.audio.play('teleport');
+      ps.cost(16 + dist / 18);
+      g.bus.emit('teleport', { x: fromX, y: fromY, tx: p.cx, ty: p.cy, dist });
     },
   };
 
@@ -391,7 +456,13 @@
     down(ps, g) { g.audio.play('perceive'); },
     hold(ps, g, dt, x, y) {
       ps.perceive = { x, y, r: 42 };
-      ps.cost(4 * dt);
+      let culpa = false;
+      for (const reg of Object.values(g.regions)) {
+        if (!reg.apto) continue;
+        const cx = U.clamp(x, reg.x, reg.x + reg.w), cy = U.clamp(y, reg.y, reg.y + reg.h);
+        if (U.dist(cx, cy, x, y) < 30) culpa = true;
+      }
+      ps.cost((culpa ? 11 : 4) * dt); // olhar a casa dos outros pesa na Linha
       for (const p of g.props) {
         if (p.hidden && !p.perceived && U.dist(p.cx, p.cy, x, y) < 42) {
           p.perceived = true; p.flash = 0.6; g.audio.play('success', 0.6);

@@ -274,8 +274,14 @@
       this.drawLayer(c, this.farSky, 0.12, groundY - 30, night);
       this.drawLayer(c, this.midSky, 0.3, groundY - 6, night);
 
-      // cena do vizinho (só aparece através da parede com Percepção)
-      if (perc && !ps.blockedRegions.has('paredeVizinho') && g.regions.paredeVizinho.perceivable) this.drawNeighbor(c, cam, g.regions.paredeVizinho);
+      // o que há atrás das paredes (só aparece com Percepção)
+      if (perc) {
+        for (const [id, reg] of Object.entries(g.regions)) {
+          if (!reg.scene || !reg.perceivable || ps.blockedRegions.has(id)) continue;
+          if (perc.x + perc.r < reg.x || perc.x - perc.r > reg.x + reg.w || perc.y + perc.r < reg.y || perc.y - perc.r > reg.y + reg.h) continue;
+          this.drawScene(c, cam, reg);
+        }
+      }
 
       // parede de fundo
       this.drawWorldLayer(c, this.bgCv, perc, 0.15);
@@ -290,6 +296,8 @@
       // atendente atrás do balcão já está desenhado por cima do balcão? (desenha antes dos blocos)
       // blocos da frente
       this.drawWorldLayer(c, this.fgCv, perc, 0.35);
+      // escada do prédio
+      this.drawStairs(c, cam);
 
       // pickups
       for (const pk of g.pickups) {
@@ -302,9 +310,8 @@
 
       // pessoas atrás do balcão
       for (const n of g.npcs) if (n.behind && n.visibleNow) this.drawNPC(c, n, cam);
-      // re-desenha o balcão por cima da atendente
-      const balcao = g.decor.find((d) => d.type === 'balcao');
-      if (balcao) G.Sprites.decor(c, balcao, balcao.x - cam.x, balcao.y - cam.y, env);
+      // balcões por cima de quem está atrás deles
+      for (const d of g.decor) if (d.front) G.Sprites.decor(c, d, d.x - cam.x, d.y - cam.y, env);
 
       // objetos
       for (const p of g.props) {
@@ -411,13 +418,59 @@
       c.restore();
     }
 
-    drawNeighbor(c, cam, r) {
-      const x = r.x - cam.x, y = r.y - cam.y;
-      R(c, x, y, r.w, r.h, '#8f8269');
-      for (let i = 0; i < r.w; i += 10) R(c, x + i, y, 1, r.h, '#857860');
-      R(c, x + 4, y + r.h - 10, 34, 10, '#6b5040'); R(c, x + 5, y + r.h - 13, 32, 4, '#d8d0c0'); R(c, x + 50, y + 8, 14, 10, '#3d5a73');
-      G.Sprites.human(c, x + 40, y + r.h - 26, { facing: -1, state: 'idle', t: this.time, shirtless: true,
-        pal: { skin: '#e2b48f', skinS: '#c08f6b', hair: '#6b5a4a', shirt: '#e2b48f', shirtS: '#c08f6b', pants: '#f4f4f4', pantsS: '#e0e0e0', shoe: '#e2b48f', eye: '#222', belt: '#f4f4f4' } });
+    /** Interiores revelados pela Percepção. Moradores e cenas são conteúdo original do jogo,
+     *  exceto o vizinho de cueca (cap. 2) e o barulho de arrastar do vizinho de cima (cap. 1). */
+    drawScene(c, cam, r) {
+      const x = r.x - cam.x, y = r.y - cam.y, t = this.time, H = G.Sprites.human;
+      const pal = (o) => Object.assign({ skin: '#e2b48f', skinS: '#c08f6b', hair: '#4a3a2a', shirt: '#5d6d7e', shirtS: '#4a5866', pants: '#34495e', pantsS: '#2c3e50', shoe: '#222', eye: '#222', belt: '#333' }, o);
+      const floor = y + r.h;
+      switch (r.scene) {
+        case 'vizinho':
+          R(c, x, y, r.w, r.h, '#8f8269'); for (let i = 0; i < r.w; i += 10) R(c, x + i, y, 1, r.h, '#857860');
+          R(c, x + 4, floor - 10, 34, 10, '#6b5040'); R(c, x + 5, floor - 13, 32, 4, '#d8d0c0'); R(c, x + 50, y + 8, 14, 10, '#3d5a73');
+          H(c, x + 40, floor - 26, { facing: -1, state: 'idle', t, shirtless: true, pal: pal({ shirt: '#e2b48f', shirtS: '#c08f6b', pants: '#f4f4f4', pantsS: '#e0e0e0', shoe: '#e2b48f', hair: '#6b5a4a', belt: '#f4f4f4' }) });
+          break;
+        case 'apto11': // senhora vendo novela
+          R(c, x, y, r.w, r.h, '#a7b88f'); R(c, x + 8, floor - 14, 26, 14, '#7b4b3a'); R(c, x + 10, floor - 18, 22, 6, '#8c5a48');
+          R(c, x + 60, floor - 20, 18, 14, '#111'); R(c, x + 61, floor - 19, 16, 10, Math.sin(t * 3) > 0 ? '#c0587e' : '#d07090');
+          H(c, x + 16, floor - 26 - 6, { facing: 1, state: 'sit', t, pal: pal({ hair: '#cfcfcf', shirt: '#8e6fb3', shirtS: '#6f548f' }), hairStyle: 'bun' });
+          R(c, x + 30, floor - 10, 4, 10, '#7b4b3a');
+          break;
+        case 'apto12': // família jantando feijão
+          R(c, x, y, r.w, r.h, '#e3c79a'); R(c, x + 18, floor - 13, 50, 2, '#8a5a2b'); R(c, x + 22, floor - 11, 2, 11, '#6a4220'); R(c, x + 62, floor - 11, 2, 11, '#6a4220');
+          R(c, x + 32, floor - 16, 6, 3, '#4a2a14'); R(c, x + 46, floor - 16, 6, 3, '#f1f1f1');
+          H(c, x + 10, floor - 26, { facing: 1, state: 'idle', t, pal: pal({ shirt: '#2e86c1' }), gesture: Math.sin(t * 4) > 0.5 ? 2 : 0 });
+          H(c, x + 70, floor - 26, { facing: -1, state: 'idle', t: t + 2, pal: pal({ shirt: '#c0392b', hair: '#111', skin: '#8d5a3b', skinS: '#6e432a' }), hairStyle: 'long' });
+          H(c, x + 40, floor - 22, { facing: 1, state: 'idle', t: t + 4, pal: pal({ shirt: '#27ae60' }) });
+          break;
+        case 'apto31': { // o vizinho de cima arrastando... alguma coisa coberta (o romance nunca diz o que é)
+          R(c, x, y, r.w, r.h, '#6e6a80'); const k = (Math.sin(t * 0.8) + 1) / 2;
+          const ox = x + 20 + k * 40;
+          R(c, ox, floor - 14, 18, 14, '#d9d4c7'); R(c, ox + 2, floor - 15, 14, 2, '#cfc9ba'); R(c, ox - 1, floor - 2, 20, 2, '#bdb7a8');
+          H(c, ox + 20, floor - 26, { facing: -1, state: 'walk', t: t * 0.6, pal: pal({ shirt: '#7f8c8d', hair: '#2c2c2c' }) });
+          if (Math.sin(t * 9) > 0.7) R(c, ox - 4, floor - 1, 2, 1, '#fff');
+          break;
+        }
+        case 'apto32': // vazio: caixas e poeira
+          R(c, x, y, r.w, r.h, '#4b4f58'); R(c, x + 12, floor - 10, 12, 10, '#a0825a'); R(c, x + 26, floor - 8, 10, 8, '#8c6f48'); R(c, x + 15, floor - 18, 9, 8, '#a0825a');
+          R(c, x + 60, y + 6, 14, 10, '#2b2e35'); for (let i = 0; i < 6; i++) R(c, x + 40 + ((t * 6 + i * 13) % 40), y + 10 + i * 6, 1, 1, 'rgba(255,255,255,0.3)');
+          break;
+        default: break;
+      }
+    }
+
+    /** Lances da escada: degraus de madeira desenhados sobre as lajes. */
+    drawStairs(c, cam) {
+      for (const s of this.g.stairs || []) {
+        const n = 8, dx = (s.x1 - s.x0) / n, dy = (s.y0 - s.y1) / n;
+        for (let i = 0; i < n; i++) {
+          const sx = s.x0 + dx * i + (dx > 0 ? 0 : dx) + 5 - cam.x, sy = s.y0 - dy * (i + 1) - cam.y;
+          R(c, sx - 3, sy, Math.abs(dx) + 6, 2, '#a87444'); R(c, sx - 3, sy + 2, Math.abs(dx) + 6, dy - 2, 'rgba(70,45,24,0.85)');
+        }
+        // corrimão
+        c.save(); c.strokeStyle = '#5c3b1c'; c.lineWidth = 1; c.beginPath();
+        c.moveTo(s.x0 + 5 - cam.x, s.y0 - 14 - cam.y); c.lineTo(s.x1 + 5 - cam.x, s.y1 - 14 - cam.y); c.stroke(); c.restore();
+      }
     }
 
     drawFacadeLights(c, cam, night) {
@@ -446,7 +499,7 @@
           break;
         case 'moto':
           if (n.alpha <= 0) return;
-          c.save(); c.globalAlpha = n.alpha; G.Sprites.moto(c, x, y - 6, n.facing, n.anim, n.hop || 0); c.restore();
+          c.save(); c.globalAlpha = n.alpha; G.Sprites.moto(c, x, y, n.facing, n.anim, n.hop || 0); c.restore();
           break;
         case 'senhora':
           G.Sprites.human(c, x, y - 2, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#e0b896', skinS: '#c39a78', hair: '#cfcfcf', shirt: '#7d5a8c', shirtS: '#5e4269', shoe: '#5a3d2b' }), hairStyle: 'bun', dress: '#6b4a7a', handOnBag: n.anim > 0 ? 1 : 0, seed: 3 });
@@ -458,11 +511,22 @@
         case 'casal_b':
           G.Sprites.human(c, x, y, { facing: -1, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#8d5a3b', skinS: '#6e432a', shirt: '#2e6f8e', shirtS: '#235a73', hair: '#111' }), gesture: n.sayT > 0 ? Math.round(Math.abs(n.anim) * 3) : 0, seed: 5 });
           break;
+        case 'crianca': {
+          const jump = n.anim > 0.6 ? 2 : 0;
+          c.save(); c.translate(x + 5, y + n.h - jump); c.scale(0.7, 0.7);
+          G.Sprites.human(c, -5, -26, { facing: n.facing, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#c68e64', shirt: '#f39c12', shirtS: '#d68910', pants: '#2e86c1', pantsS: '#21618c', hair: '#3b2416' }), seed: 7, gesture: n.anim > 0.3 ? 4 : 0 });
+          c.restore();
+          break;
+        }
+        case 'porteiro':
+          G.Sprites.human(c, x, y, { facing: n.facing, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#a9714b', skinS: '#8a5a3a', shirt: '#34495e', shirtS: '#2c3e50', hair: '#d0d0d0' }), seed: 8 });
+          break;
         case 'atendente':
           G.Sprites.human(c, x, y, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { shirt: '#d9d4c7', shirtS: '#bfb9aa', skin: '#d8a27a' }), apron: true, hairStyle: 'cap', seed: 6 });
           break;
         default: break;
       }
+      if (n.alert > 0 && !(n.say && n.sayT > 0)) { R(c, x + 4, y - 10, 2, 5, '#ffd27a'); R(c, x + 4, y - 4, 2, 2, '#ffd27a'); }
       if (n.say && n.sayT > 0) {
         c.save(); c.font = '11px "VT323", monospace'; c.textAlign = 'center';
         const tw = Math.ceil(c.measureText(n.say).width) + 6;
@@ -482,7 +546,7 @@
         c.save(); c.globalAlpha = 0.18 * Math.max(p.powerGlow, g.powers.held ? 1 : 0);
         c.fillStyle = P ? P.color : '#9fd8ff'; c.beginPath(); c.arc(x + 5, y + 12, 16, 0, Math.PI * 2); c.fill(); c.restore();
       }
-      G.Sprites.human(c, x, y, { facing: p.facing, state: p.state, t: p.anim, landT: p.landT, aim, glow: p.powerGlow, glowColor: P ? P.color : '#9fd8ff', flash: g.powers.unravelT > 0 ? g.powers.unravelT : 0 });
+      G.Sprites.human(c, x, y, { facing: p.facing, state: p.running && p.state === 'walk' ? 'walk' : p.state, t: p.anim * (p.running ? 1.5 : 1), landT: p.landT, aim, carrying: !!p.carry, glow: p.powerGlow, glowColor: P ? P.color : '#9fd8ff', flash: g.powers.unravelT > 0 ? g.powers.unravelT : 0 });
       if (p.state === 'stun' || this.starsT > 0) {
         for (let i = 0; i < 3; i++) {
           const a = this.time * 6 + i * 2.1;
@@ -535,7 +599,12 @@
       }
       if (P && P.id === 'criar' && g.canControl()) {
         const t = G.POWERS.criar.target(ps, g, m.x, m.y);
-        c.save(); c.globalAlpha = 0.45; R(c, t.r.x - cam.x, t.r.y - cam.y, 5, 5, t.ok ? '#ffb347' : '#ff5e7a'); c.restore();
+        c.save(); c.globalAlpha = 0.45; R(c, t.r.x - cam.x, t.r.y - cam.y, t.r.w, t.r.h, t.ok ? '#ffb347' : '#ff5e7a'); c.restore();
+      }
+      if (P && P.id === 'teleporte' && g.canControl()) {
+        const t = G.POWERS.teleporte.target(ps, g, m.x, m.y);
+        c.save(); c.globalAlpha = 0.35; c.strokeStyle = t.ok ? '#ff7ad9' : '#ff5e7a'; c.setLineDash([2, 2]);
+        c.strokeRect(t.r.x - cam.x - 0.5, t.r.y - cam.y - 0.5, t.r.w + 1, t.r.h + 1); c.restore();
       }
       if (ps.perceive) {
         const pr = ps.perceive;

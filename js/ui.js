@@ -149,7 +149,7 @@
       const emo = ps.emo;
       const em = $('#emotion'); em.textContent = emo.label; em.style.color = emo.color;
       em.title = 'Estado emocional: altera o custo dos poderes e o quanto a Linha relaxa.';
-      $('#compreensao').textContent = 'Compreensão ' + ps.compreensao;
+      $('#compreensao').textContent = 'Compreensão ' + ps.compreensao + (g.wallet ? ' · ' + g.wallet.text : '');
       $('#clock').textContent = G.weekdayOf(g.clock.day) + ' · ' + G.util.fmtClock(g.clock.min) + ' · dia ' + g.clock.day;
       $('#place').textContent = g.areaName || '';
       // hotbar
@@ -157,6 +157,10 @@
         const id = el.dataset.power;
         el.classList.toggle('locked', !ps.isUnlocked(id));
         el.classList.toggle('sel', ps.selected === id);
+        if (id === 'criar') {
+          const c = G.CRIAVEIS.find((q) => q.id === ps.criarSel);
+          el.querySelector('.name').textContent = 'Criar: ' + (c ? c.name : 'Laranja');
+        }
       });
       // objetivo
       if (g.story.dirty) {
@@ -299,7 +303,10 @@
           if (!ps.isUnlocked(id)) { h += '<p class="entry muted">' + (G.POWER_ORDER.indexOf(id) + 1) + '. ???</p>'; continue; }
           h += '<div class="pw"><canvas data-icon="' + id + '" width="16" height="16"></canvas><p class="entry"><b>' + (G.POWER_ORDER.indexOf(id) + 1) + '. ' + esc(P.name) + '</b> — ' + esc(P.desc) + '</p></div>';
         }
-        if (ps.vooInstavel) h += '<p class="entry muted">Voar: ainda instável. (Bati a cabeça no teto.) Volta na Etapa 3.</p>';
+        if (ps.vooLivre) h += '<p class="entry">Voar: no ar, segure Pular. Gasta a Linha e dura pouco. Ainda instável, mas lá fora não tem teto. (extensão original)</p>';
+        else if (ps.vooInstavel) h += '<p class="entry muted">Voar: ainda instável. (Bati a cabeça no teto.)</p>';
+        h += '<p class="entry muted">Criar sabe fazer: ' + G.CRIAVEIS.filter((c) => ps.criaveis.has(c.id)).map((c) => c.name).join(', ') + '.</p>';
+        if (g.story.flags.testemunhas) h += '<p class="entry muted">Pessoas que viram alguma coisa impossível: ' + g.story.flags.testemunhas + '.</p>';
       }
       page.innerHTML = h;
       page.querySelectorAll('canvas[data-icon]').forEach((cv) => G.Sprites.icon(cv.getContext('2d'), cv.dataset.icon));
@@ -324,6 +331,8 @@
         grid.appendChild(d);
       });
       const det = $('#inv-detail');
+      det.dataset.wallet = '';
+      $('#bolsos h2').textContent = 'Bolsos · carteira ' + (this.g.wallet ? this.g.wallet.text : '');
       const s = inv.slots[this.invSel];
       if (!s) { det.innerHTML = '<span class="muted">Clique num item para ver o que dá pra fazer com ele.</span>'; return; }
       const def = G.ITEMS[s.id];
@@ -387,9 +396,9 @@
     renderControls() {
       const b = this.g.settings.bindings, k = (a) => (b[a] || []).map(G.keyName).join(' / ');
       const rows = [
-        [k('left') + ' · ' + k('right'), 'Andar'], [k('jump'), 'Pular (segure para pular mais alto)'], [k('down'), 'Descer de patamares e plataformas'],
-        [k('interact'), 'Interagir / avançar diálogo'], ['1–6 · roda do mouse', 'Escolher poder'], ['Botão esquerdo', 'Usar o poder escolhido (segurar, clicar)'],
-        ['Botão direito', 'Pousar com cuidado / cancelar seleção'], [k('hold'), 'Segurar com precisão (Levitar) e com força (cenas)'], [k('cancel'), 'Cancelar poder'],
+        [k('left') + ' · ' + k('right'), 'Andar'], [k('run'), 'Correr (segure enquanto anda)'], [k('jump'), 'Pular (segure para ir mais alto) · subir escada · voar no ar (quando liberado)'], [k('down'), 'Descer escada e patamares'],
+        [k('interact'), 'Interagir / avançar diálogo'], ['1–7 · roda do mouse', 'Escolher poder'], ['Botão esquerdo', 'Usar o poder escolhido (segurar, clicar)'],
+        ['Botão direito', 'Pousar com cuidado / cancelar seleção'], [k('hold'), 'Segurar com precisão (Levitar) e com força (cenas)'], ['Botão direito (Criar)', 'Trocar o que criar'], [k('cancel'), 'Cancelar poder'],
         [k('caderno'), 'Caderno: descobertas, registros, missões, poderes'], [k('bolsos'), 'Bolsos (inventário)'], [k('pause'), 'Pausa · salvar · carregar'],
       ];
       $('#controls-list').innerHTML = rows.map((r) => '<span class="k">' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span>').join('');

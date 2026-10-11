@@ -25,13 +25,14 @@ O progresso fica no `localStorage` do navegador (3 espaços manuais + 1 automát
 | Tecla | Ação |
 |---|---|
 | A / D ou ← / → | Andar |
-| W, Espaço ou ↑ | Pular (segure para ir mais alto) |
-| S ou ↓ | Descer de patamares |
+| Shift (segurar) | Correr |
+| W, Espaço ou ↑ | Pular (segure para ir mais alto) · subir escada · voar no ar (depois do capítulo 2) |
+| S ou ↓ | Descer escada |
 | E ou Enter | Interagir / avançar diálogo |
-| 1–6 ou roda do mouse | Escolher poder |
+| 1–7 ou roda do mouse | Escolher poder |
 | Botão esquerdo | Usar o poder (segurar/arrastar/clicar) |
-| Botão direito | Pousar objeto com cuidado / cancelar seleção |
-| Shift | Precisão (Levitar) e firmeza (cenas) |
+| Botão direito | Pousar objeto com cuidado / cancelar seleção / trocar o que Criar faz |
+| C (segurar) | Precisão (Levitar) e firmeza (cenas) |
 | Q | Cancelar poder |
 | J ou Tab | Caderno |
 | I | Bolsos (inventário) |
@@ -91,17 +92,31 @@ e alguma coisa frágil por perto pode quebrar (e aí é preciso restaurar, o que
 | 3 | Deslocar | o controle remoto que atravessa a sala | Leva um objeto a outro ponto sem percorrer o caminho. |
 | 4 | Transformar | a colher, o abajur, o gosto da água | Muda forma, cor, gosto e material (caixote de madeira ↔ ferro). |
 | 5 | Criar | a laranja perfeita | Faz uma laranja existir. Outras criações virão com a campanha. |
-| 6 | Percepção | a parede transparente | Enxerga através das coisas e revela o que está escondido. |
+| 6 | Percepção | a parede transparente | Enxerga através das coisas: segredos, a bolsa da senhora, o interior dos apartamentos (olhar a casa dos outros pesa na Linha). |
+| 7 | Teleporte | extensão original (liberado ao fim do cap. 2) | V aparece num lugar livre ao alcance sem percorrer o caminho. |
 
-O voo aparece como evento do capítulo 2 (bater a cabeça no teto) e fica "instável" até a
-Etapa 3.
+Criar começa só com a laranja (canônica); depois de comê-la, faz maçã, banana, pão, café e chocolate,
+e no fim da etapa, dinheiro (com consequências: a atendente pode desconfiar de notas "novas demais").
+
+O voo aparece como evento do capítulo 2 (bater a cabeça no teto). Depois do fim do capítulo, fica
+liberado de forma instável: no ar, segure Pular; dura pouco e gasta a Linha.
+
+### Pessoas que reagem
+
+Quem estiver perto e no mesmo ambiente **vê** o que V faz (objetos flutuando, coisas aparecendo,
+teleporte, voo) e reage: espanto, comentários, fuga. Objetos arremessados podem acertar alguém.
+Todo mundo conversa (E) e lembra do que viu. O caderno conta quantas pessoas já viram algo
+impossível. Missões secundárias originais: a pipa do menino (com escolha sobre contar a verdade),
+a chave da senhora, a entrega do 32, os pequenos consertos, as terças-feiras, os experimentos e o
+segredo do telhado (que pode terminar devolvendo a chave ao porteiro, Seu Valdir).
 
 ## O que já funciona
 
 - Menu inicial com cenário animado, pausa, configurações (volume, tremor de tela, reduzir
   flashes, FPS, escala da tela, remapeamento de teclas), tela de controles e tela "Sobre".
-- Movimento com aceleração, atrito, coyote time, buffer de pulo e pulo variável; colisão
-  em sub-passos (não atravessa o chão nem prende na parede); patamares de mão única.
+- Movimento com aceleração, atrito, coyote time, buffer de pulo, pulo variável e corrida;
+  colisão em sub-passos (não atravessa o chão nem prende na parede); escada de verdade entre os
+  andares (W sobe, S desce).
 - Câmera com suavização e antecipação, mundo de 150×50 blocos maior que a tela.
 - Apartamento completo (cozinha, sala, quarto, hall, banheiro), prédio de 4 andares com
   escada e telhado, terreno baldio, rua, praça e padaria.
@@ -175,7 +190,7 @@ tests/playthrough.js  teste de ponta a ponta: joga a Etapa 1 inteira no Chromium
 ## Testes
 
 ```bash
-node tests/unit.js                 # 27 testes de física, poderes, objetos, bolsos e salvamento
+node tests/unit.js                 # 34 testes de física, escada, poderes, objetos, pessoas, bolsos e salvamento
 ```
 
 O teste de ponta a ponta precisa do Playwright:

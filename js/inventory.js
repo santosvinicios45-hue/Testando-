@@ -31,9 +31,34 @@
     pao_frances: {
       name: 'Pão francês', stack: 6, icon: 'pao',
       desc: 'Conteúdo original do jogo. Pão comum, de padaria comum.',
-      actions: ['Comer'],
-      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 10); g.bubble('Pão. Normal. Maravilhosamente normal.', 2.5); g.bus.emit('eat', { item: 'pao_frances' }); return true; },
+      actions: ['Comer', 'Largar'], drop: 'pao',
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 10); g.bubble('Pão. Normal. Maravilhosamente normal.', 2.5, true); g.bus.emit('eat', { item: 'pao_frances' }); return true; },
     },
+    maca: {
+      name: 'Maçã perfeita', stack: 6, icon: 'maca', desc: 'Conteúdo original do jogo. Vermelha demais. Nenhuma marca, nenhum bicho.', actions: ['Comer', 'Largar'], drop: 'maca',
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 20); g.bubble('Crocante. Simétrica. Um pouco assustadora.', 2.5, true); g.audio.play('pickup'); g.bus.emit('eat', { item: 'maca' }); return true; },
+    },
+    banana: {
+      name: 'Banana perfeita', stack: 6, icon: 'banana', desc: 'Conteúdo original do jogo. Amarela sem uma pinta sequer.', actions: ['Comer', 'Largar'], drop: 'banana',
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 20); g.bubble('Banana. Do jeito que banana devia ser e nunca é.', 2.5, true); g.audio.play('pickup'); g.bus.emit('eat', { item: 'banana' }); return true; },
+    },
+    cafe: {
+      name: 'Café', stack: 6, icon: 'cafe', desc: 'Conteúdo original do jogo. Quente, no ponto, sem açúcar.', actions: ['Comer', 'Largar'], drop: 'cafe',
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 25); g.bubble('O café que ele ainda não tinha feito. Agora tinha.', 2.5, true); g.audio.play('pickup'); g.bus.emit('eat', { item: 'cafe' }); return true; },
+    },
+    chocolate: {
+      name: 'Chocolate', stack: 6, icon: 'chocolate', desc: 'Conteúdo original do jogo. Barra de chocolate ao leite.', actions: ['Comer', 'Largar'], drop: 'chocolate',
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 15); g.bubble('Doce demais. Igualzinho ao da infância.', 2.5, true); g.audio.play('pickup'); g.bus.emit('eat', { item: 'chocolate' }); return true; },
+    },
+    sonho: {
+      name: 'Sonho de padaria', stack: 6, icon: 'sonho', desc: 'Conteúdo original do jogo. Recheado de creme, polvilhado de açúcar.', actions: ['Comer', 'Largar'], drop: null,
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 15); g.bubble('Açúcar na camisa inteira. Valeu a pena.', 2.5, true); g.audio.play('pickup'); g.bus.emit('eat', { item: 'sonho' }); return true; },
+    },
+    bala: {
+      name: 'Bala de goma', stack: 6, icon: 'bala', desc: 'Conteúdo original do jogo. Presente da senhora da chave.', actions: ['Comer', 'Largar'], drop: null,
+      use(g) { g.powers.tension = Math.max(0, g.powers.tension - 5); g.bubble('Bala de goma. Gosto de domingo.', 2.5, true); g.audio.play('pickup'); g.bus.emit('eat', { item: 'bala' }); return true; },
+    },
+    pacote: { name: 'Pacote do 32', stack: 1, icon: 'pacote', desc: 'Conteúdo original do jogo. Uma entrega para o apartamento 32. Leve ao porteiro.', actions: [] },
     chave_terraco: {
       name: 'Chave do terraço', stack: 1, icon: 'chave',
       desc: 'Conteúdo original do jogo. Abre o alçapão no topo da escada.',
@@ -97,4 +122,15 @@
     }
   }
   G.Inventory = Inventory;
+
+  /** Carteira de V (reais). "criado" guarda quanto dinheiro saiu do poder de Criar. */
+  class Wallet {
+    constructor(reais) { this.reais = reais; this.criado = 0; }
+    pay(v) { if (this.reais + 1e-9 < v) return false; this.reais = Math.round((this.reais - v) * 100) / 100; return true; }
+    add(v, criado) { this.reais = Math.round((this.reais + v) * 100) / 100; if (criado) this.criado += v; }
+    get text() { return 'R$ ' + this.reais.toFixed(2).replace('.', ','); }
+    serialize() { return { reais: this.reais, criado: this.criado }; }
+    applySave(d) { if (d) { this.reais = +d.reais || 0; this.criado = +d.criado || 0; } }
+  }
+  G.Wallet = Wallet;
 })(window.VG = window.VG || {});
