@@ -462,6 +462,7 @@
       this.drawWorldLayer(c, this.bgCv, perc, 0.15);
       // decoração
       for (const d of g.decor) {
+        if (d.over) continue;
         const x = d.x - cam.x, y = d.y - cam.y;
         if (x > VW + 80 || y > VH + 80 || x + d.w < -80 || y + d.h < -80) continue;
         G.Sprites.decor(c, d, x, y, env);
@@ -472,6 +473,8 @@
       // atendente atrás do balcão já está desenhado por cima do balcão? (desenha antes dos blocos)
       // blocos da frente
       this.drawWorldLayer(c, this.fgCv, perc, 0.35);
+      // placas presas na fachada (por cima dos blocos)
+      for (const d of g.decor) if (d.over) G.Sprites.decor(c, d, d.x - cam.x, d.y - cam.y, env);
       // escada do prédio
 
       // pickups

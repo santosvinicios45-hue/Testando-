@@ -121,9 +121,9 @@
       p.hline(dx, dy + 10, 10, '#5aa64a');
       p.rect(dx + 4, dy - 1, 3, 3, '#d63b3b'); p.px(dx + 4, dy - 1, '#ff8a80');
       // bilhete amarelo + ímãs redondos
-      p.rect(5 * S - 2, 19 * S + 2, 8, 7, '#f4d04a'); p.hline(5 * S - 2, 19 * S + 2, 8, '#fbe58a');
-      p.hline(5 * S - 1, 19 * S + 5, 5, '#c79b2a'); p.hline(5 * S - 1, 19 * S + 7, 4, '#c79b2a');
-      p.ball(5 * S + 1, 19 * S + 1, 1.5, 1.5, '#3f8fd8');
+      p.rect(5 * S - 2, 19 * S + 6, 8, 7, '#f4d04a'); p.hline(5 * S - 2, 19 * S + 6, 8, '#fbe58a');
+      p.hline(5 * S - 1, 19 * S + 9, 5, '#c79b2a'); p.hline(5 * S - 1, 19 * S + 11, 4, '#c79b2a');
+      p.ball(5 * S + 1, 19 * S + 5, 1.5, 1.5, '#3f8fd8');
       p.ball(9, 6, 1.6, 1.6, '#4fb05a'); p.ball(14, 8, 1.6, 1.6, '#e8834a');
       // calendariozinho no congelador
       p.rect(5, 9, 8, 9, '#ffffff'); p.rect(5, 9, 8, 2, '#d24a4a');
@@ -236,12 +236,14 @@
       }
       p.rect(0, Hh - 4, W, 4, T.d); p.hline(0, Hh - 4, W, T.b);                     // rodapé
       const s0 = shelves[0] || 20, s1 = shelves[1] || 44, s2 = shelves[2] || 68;
-      // nicho de cima: livros
-      books(p, 4, s0, W - 8, 3);
-      // nicho 2: livro (objeto) fica à esquerda; aqui livros à direita e um porta-retrato
-      books(p, 20, s1, W - 24, 11);
-      p.rect(4, s1 - 8, 6, 8, '#d9b45a'); p.rect(5, s1 - 7, 4, 5, '#8fc1d9'); p.rect(5, s1 - 4, 4, 2, '#5f9e55'); p.hline(4, s1 - 8, 6, '#f2d88a');
-      // nicho 3: jogos (objetos) na esquerda; console e controle à direita
+      // nicho de cima: o livro (objeto) fica em x 10..18; vasinho à esquerda, livros à direita
+      p.rect(4, s0 - 4, 5, 4, '#b8703f'); p.hline(4, s0 - 4, 5, '#d98c55');
+      p.rect(5, s0 - 8, 1, 4, '#3a9a47'); p.rect(6, s0 - 9, 2, 5, '#46ad54'); p.px(4, s0 - 7, '#2f7d3a');
+      books(p, 20, s0, W - 24, 3);
+      // nicho 2: jogos (objetos) em x 6..24; só uns livrinhos finos no canto
+      books(p, 25, s1, W - 29, 11);
+      // nicho 3: porta-retrato, console e controle
+      p.rect(4, s2 - 8, 6, 8, '#d9b45a'); p.rect(5, s2 - 7, 4, 5, '#8fc1d9'); p.rect(5, s2 - 4, 4, 2, '#5f9e55'); p.hline(4, s2 - 8, 6, '#f2d88a');
       p.rect(W - 13, s2 - 5, 9, 5, '#2d2f38'); p.hline(W - 13, s2 - 5, 9, '#4a4d5a'); p.px(W - 6, s2 - 3, '#4cd964');
       p.rect(W - 12, s2 - 8, 6, 3, '#e8e8ee'); p.hline(W - 12, s2 - 8, 6, '#ffffff'); p.px(W - 11, s2 - 7, '#e74c3c'); p.px(W - 8, s2 - 7, '#3f8fd8');
       // nicho de baixo: cestos de palha e livros grandes
@@ -352,7 +354,8 @@
         p.rect(x0 + 1, 2, half - 2, 13, T.b); p.rect(x0, 3, half, 11, T.b);
         p.hline(x0 + 2, 2, half - 4, T.l); p.hline(x0 + 2, 3, half - 6, T.h);
         p.vline(x0, 4, 8, T.l);
-        p.hline(x0 + 1, 14, half - 2, T.d); p.vline(x0 + half - 1, 4, 10, T.d);
+        p.hline(x0 + 1, 13, half - 2, T.d); p.hline(x0 + 2, 14, half - 4, T.d2); p.vline(x0 + half - 1, 4, 9, T.d);
+        p.rect(x0 + half - 3, 10, 2, 3, T.d);
         // capitonê e dobrinhas
         p.px(x0 + 7, 8, T.d2); p.px(x0 + half - 8, 8, T.d2);
         p.line(x0 + 4, 11, x0 + 8, 10, T.d); p.line(x0 + half - 5, 6, x0 + half - 3, 9, T.d);
@@ -376,12 +379,14 @@
         p.hline(ax, 26, 8, T.d2);
         p.ball(ax + 4, 13, 2, 2, T.b);
       }
-      // almofada mostarda do lado direito
-      const Tm = tn('#d9a441');
-      p.poly([[W - 19, 6], [W - 11, 5], [W - 9, 15], [W - 20, 16]], Tm.b);
-      p.line(W - 19, 6, W - 12, 5, Tm.h); p.line(W - 19, 7, W - 20, 15, Tm.l);
-      p.line(W - 10, 7, W - 9, 15, Tm.d); p.hline(W - 19, 15, 10, Tm.d);
-      p.px(W - 15, 10, Tm.d2);
+      // almofada mostarda do lado direito (quadrada, cantos pontudos)
+      const Tm = tn('#d9a441'), ax = W - 21, ay = 5;
+      p.rect(ax + 1, ay + 1, 10, 9, Tm.b);
+      p.px(ax, ay, Tm.b); p.px(ax + 11, ay, Tm.b); p.px(ax, ay + 10, Tm.d); p.px(ax + 11, ay + 10, Tm.d);
+      p.hline(ax + 2, ay + 1, 8, Tm.h); p.vline(ax + 1, ay + 2, 7, Tm.l); p.hline(ax + 2, ay + 2, 3, Tm.l);
+      p.hline(ax + 1, ay + 9, 10, Tm.d); p.vline(ax + 10, ay + 2, 7, Tm.d);
+      p.px(ax + 6, ay + 1, Tm.d); p.px(ax + 6, ay + 9, Tm.d2);                        // costura franzida
+      p.px(ax + 5, ay + 5, Tm.d2); p.px(ax + 6, ay + 5, Tm.d); p.line(ax + 3, ay + 7, ax + 5, ay + 6, Tm.d);
       // pés de madeira
       for (const lx of [5, W - 8]) { p.rect(lx, 27, 3, 3, '#3b2a1c'); p.px(lx, 27, '#6a4a32'); }
     });
@@ -542,11 +547,12 @@
       p.rect(bx - 3, 1, 5, 11, Tl.l); p.hline(bx - 3, 1, 5, Tl.h); p.vline(bx - 3, 1, 11, Tl.b); // dobra do lençol
       p.hline(bx, 1, W - bx - 4, Tb.h); p.hline(bx, 2, W - bx - 4, Tb.l);
       p.hline(bx, 13, W - bx - 4, Tb.d2);
-      for (let i = 0; i < 4; i++) {                                                  // pregas
-        const fx = bx + 8 + i * 12;
-        p.line(fx, 5, fx + 4, 12, Tb.d); p.line(fx + 1, 5, fx + 5, 12, Tb.l);
+      p.rect(bx, 3, W - bx - 4, 3, Tb.l); p.hline(bx, 6, W - bx - 4, Tb.d);            // tampo do cobertor
+      for (let i = 0; i < 5; i++) {                                                  // pregas caindo pela lateral
+        const fx = bx + 6 + i * 10 + (i % 2) * 2;
+        p.vline(fx, 7, 6, Tb.d); p.vline(fx + 1, 8, 5, Tb.l); p.px(fx - 1, 12, Tb.d);
       }
-      for (let x = bx + 2; x < W - 6; x += 6) p.px(x, 9, Tb.l);                      // costura xadrez
+      p.line(bx + 10, 4, bx + 16, 4, Tb.h); p.line(bx + 30, 3, bx + 34, 4, Tb.d);
       // travesseiro
       const Tp = tn('#f5f1e8');
       p.rect(6, -3, 17, 8, Tp.b); p.rect(7, -4, 15, 1, Tp.b); p.rect(7, 5, 15, 1, Tp.b);
@@ -564,8 +570,8 @@
       p.rect(3, 3, W - 6, 2, '#1d2127');
     }, { outline: false });
     const day = 1 - env.night;
-    R(c, X + 3, Y + 3, W - 6, Hh - 6, 'rgba(150,170,190,' + (0.12 + day * 0.33).toFixed(3) + ')');
-    R(c, X + 3, Y + 3, W - 6, 4, 'rgba(210,225,235,' + (day * 0.25).toFixed(3) + ')');
+    R(c, X + 3, Y + 3, W - 6, Hh - 6, 'rgba(150,170,190,' + (0.2 + day * 0.4).toFixed(3) + ')');
+    R(c, X + 3, Y + 3, W - 6, 4, 'rgba(210,225,235,' + (0.05 + day * 0.3).toFixed(3) + ')');
     blit(c, 'janela_poco_fr', X, Y, W, Hh, (p) => {
       const T = tn('#6a7078');
       p.rect(0, 0, W, 3, T.b); p.rect(0, 0, 3, Hh, T.b); p.rect(W - 3, 0, 3, Hh, T.b); p.rect(0, Hh - 3, W, 3, T.b);
@@ -796,7 +802,7 @@
       p.rect(3, 11, 12, 2, M.l); p.hline(3, 11, 12, M.h);                            // ducha
       p.rect(4, 13, 10, 2, M.d); for (let x = 5; x < 14; x += 2) p.px(x, 14, '#4a5862');
       // registro na parede
-      p.rect(15, 30, 4, 4, M.b); p.px(15, 30, M.h); p.rect(16, 28, 2, 2, M.d);
+      p.rect(16, 31, 2, 2, M.d); p.rect(14, 30, 6, 1, M.b); p.vline(16, 28, 6, M.l); p.px(14, 30, M.h); p.px(19, 30, M.d);
       // perfis do box
       p.rect(0, 16, 1, Hh - 16, '#c9d3d9'); p.rect(0, Hh - 2, W, 2, '#c9d3d9'); p.hline(0, Hh - 2, W, '#eef4f7');
     });

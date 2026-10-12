@@ -20,21 +20,43 @@
 
   /* ---------- ajudantes de volume ---------- */
   /** Cilindro em pé: colunas com luz à esquerda e brilho metálico. */
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  /** Tom de um cilindro na fração f (0..1) da largura, com pontilhado ordenado entre tons vizinhos. */
+  function cylTone(T, f, sheen, i, j) {
+    // perfil: claro na borda esquerda, brilho perto dela, escurecendo até a direita
+    const ramp = sheen ? [T.l, T.h, T.l, T.b, T.b, T.d, T.d2] : [T.l, T.l, T.b, T.b, T.d, T.d, T.d2];
+    const v = f * (ramp.length - 1), a = Math.floor(v), k = v - a;
+    if (a >= ramp.length - 1) return ramp[ramp.length - 1];
+    return k * 16 > BAYER[(j & 3) * 4 + (i & 3)] + 0.5 ? ramp[a + 1] : ramp[a];
+  }
+  /** Cilindro em pé: colunas com luz à esquerda e brilho metálico. */
   function cylV(p, x, y, w, h, hex, sheen) {
     const T = P.tones(hex);
-    for (let i = 0; i < w; i++) {
-      const f = (i + 0.5) / w;
-      const col = f < 0.12 ? T.l : f < 0.3 ? (sheen ? T.h : T.l) : f < 0.6 ? T.b : f < 0.86 ? T.d : T.d2;
-      p.rect(x + i, y, 1, h, col);
+    if (w < 12) {
+      for (let i = 0; i < w; i++) {
+        const f = (i + 0.5) / w;
+        p.rect(x + i, y, 1, h, f < 0.12 ? T.l : f < 0.3 ? (sheen ? T.h : T.l) : f < 0.6 ? T.b : f < 0.86 ? T.d : T.d2);
+      }
+      return;
+    }
+    for (let i = 0; i < w; i++) for (let j = 0; j < Math.min(h, 4); j++) {
+      const col = cylTone(T, (i + 0.5) / w, sheen, x + i, y + j);
+      for (let jj = j; jj < h; jj += 4) p.px(x + i, y + jj, col);
     }
   }
   /** Cilindro deitado: linhas com luz em cima. */
   function cylH(p, x, y, w, h, hex, sheen) {
     const T = P.tones(hex);
-    for (let j = 0; j < h; j++) {
-      const f = (j + 0.5) / h;
-      const col = f < 0.14 ? T.l : f < 0.32 ? (sheen ? T.h : T.l) : f < 0.62 ? T.b : f < 0.85 ? T.d : T.d2;
-      p.rect(x, y + j, w, 1, col);
+    if (h < 12) {
+      for (let j = 0; j < h; j++) {
+        const f = (j + 0.5) / h;
+        p.rect(x, y + j, w, 1, f < 0.14 ? T.l : f < 0.32 ? (sheen ? T.h : T.l) : f < 0.62 ? T.b : f < 0.85 ? T.d : T.d2);
+      }
+      return;
+    }
+    for (let j = 0; j < h; j++) for (let i = 0; i < Math.min(w, 4); i++) {
+      const col = cylTone(T, (j + 0.5) / h, sheen, x + i, y + j);
+      for (let ii = i; ii < w; ii += 4) p.px(x + ii, y + j, col);
     }
   }
   /** Galho/tronco: segmento grosso sombreado pela normal, com sulcos de casca. */
@@ -78,6 +100,7 @@
     T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
     U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'],
     'Ç': ['01111', '10000', '10000', '10000', '10000', '10000', '01111', '00100', '01100'],
+    'Ã': ['01010', '10100', '01110', '10001', '11111', '10001', '10001'],
     '-': ['000', '000', '000', '111', '000', '000', '000'],
     ':': ['0', '1', '0', '0', '0', '1', '0'],
     ' ': ['000', '000', '000', '000', '000', '000', '000'],
@@ -148,6 +171,15 @@
         if (gl < 0.15) continue;
         const ox = R(b.x - b.r * 0.35), oy = R(b.y - b.r * 0.45);
         if (ox >= 0 && oy >= 0 && ox < w - 1 && oy < h - 1 && lit[oy * w + ox] > 0.2) { p.rect(ox, oy, 2, 1, pal[5]); p.px(ox, oy + 1, pal[4]); }
+      }
+      // franja irregular: folhinhas saltando da borda (nada de contorno liso)
+      const pal2 = [pal[0], pal[1], pal[2], pal[3], pal[4]];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (lit[y * w + x] > -9) continue;
+        const nb = [[0, 1], [1, 0], [-1, 0], [0, -1]].map(([a, b]) => (x + a >= 0 && y + b >= 0 && x + a < w && y + b < h) ? lit[(y + b) * w + x + a] : -9).filter((v) => v > -9);
+        if (!nb.length || H(x, y, seed + 3) < 0.62) continue;
+        const l = nb[0], k = l > 0.7 ? 3 : l > 0.3 ? 2 : l > -0.08 ? 1 : 0;
+        p.px(x, y, pal2[k]);
       }
       if (extra) extra(p, (x, y) => x >= 0 && y >= 0 && x < w && y < h && lit[y * w + x] > -9, lit);
     });
@@ -226,9 +258,9 @@
         p.rect(lx - u(2), Hh - u(2), u(10), u(2), '#4d535a').hline(lx - u(2), Hh - u(2), u(10), '#7a828a');
       }
       for (let i = 0; i < 2; i++) {
-        const y0 = BH + u(6 + i * 16), y1 = y0 + u(14);
-        p.line(u(20), y0, W - u(20), y1, '#4a5058').line(u(20), y1, W - u(20), y0, '#4a5058');
-        p.line(u(20), y0 + 1, W - u(20), y1 + 1, '#737b84').line(u(20), y1 + 1, W - u(20), y0 + 1, '#737b84');
+        const y0 = BH + u(5 + i * 17), y1 = y0 + u(14);
+        p.line(u(20), y0, W - u(20), y1, '#525962').line(u(20), y1, W - u(20), y0, '#525962');
+        cylH(p, u(20), y0 - 1, W - u(40), u(1.5), '#5f666e', true);
       }
       // passarela com guarda-corpo
       p.rect(u(4), BH + u(1), W - u(8), u(1.5), '#4d535a').hline(u(4), BH + u(1), W - u(8), '#8a929a');
@@ -349,7 +381,7 @@
     const W = d.w * S, Hh = d.h * S, u = (n) => R(n * S);
     const lit = env.night > 0.25;
     const s = spr('poste' + W + 'x' + Hh + (lit ? 'on' : 'off'), W, Hh, (p) => {
-      const pole = '#3c4a4f';
+      const pole = '#3a4550';
       // braço em pescoço de ganso
       limb(p, u(7), u(8), u(7.2), u(3), u(1), u(0.9), pole, 3);
       limb(p, u(7.2), u(3), u(9), u(1.2), u(0.9), u(0.8), pole, 4);
@@ -364,8 +396,8 @@
         cylV(p, R(u(7) - w / 2), y, w, 1, pole, true);
       }
       // anéis decorativos e base
-      for (const ry of [Hh - u(14), Hh - u(9)]) cylV(p, u(5.4), ry, u(3.2), u(1), '#4d5d63', true);
-      cylV(p, u(4.4), Hh - u(3), u(5.2), u(3), '#33403f', true);
+      for (const ry of [Hh - u(14), Hh - u(9)]) cylV(p, u(5.4), ry, u(3.2), u(1), '#4a5764', true);
+      cylV(p, u(4.4), Hh - u(3), u(5.2), u(3), '#323c47', true);
       p.hline(u(4.4), Hh - u(3), u(5.2), '#6a7a7a');
       p.px(u(5), Hh - u(1.5), '#9aa8a8').px(u(9), Hh - u(1.5), '#9aa8a8');
     });
@@ -461,7 +493,7 @@
       p.ball(ax + aw / 2 - u(3), ay + ah * 0.55, u(2.6), u(2.2), '#dca04a');
       p.ball(ax + aw / 2 + u(3.2), ay + ah * 0.56, u(2.6), u(2.2), '#dca04a');
       p.rect(ax + u(1), ay + ah - u(4), aw - u(2), u(2.6), '#7b2e1f');
-      text(p, 'PAO', ax + R((aw - textW('PAO', 1)) / 2), ay + ah - u(3.8), 1, '#fff2c8');
+      text(p, 'PÃO', ax + R((aw - textW('PÃO', 1)) / 2), ay + ah - u(3.8), 1, '#fff2c8');
       // tabela de horários
       p.rect(u(24), u(7), u(7), u(9), '#f2f0e8').rect(u(24), u(7), u(7), u(1.4), '#2a64a8');
       for (let i = 0; i < 4; i++) p.hline(u(25), u(10) + i * u(1.4), u(4.5 - (i % 2)), '#8a8f96');
@@ -573,7 +605,7 @@
   A.banco_ok = function (c, d, X, Y, env, S) {
     const W = d.w * S, Hh = d.h * S, u = (n) => R(n * S), top = u(4.5);
     const s = spr('banco' + W + 'x' + Hh, W, Hh + top, (p) => {
-      const wood = '#a8693a', T = P.tones(wood), iron = '#3a3f46';
+      const wood = '#a5713f', T = P.tones(wood), iron = '#3a3f46';
       const slat = (y, h, seed) => {
         p.rect(0, y, W, h, T.b).hline(0, y, W, T.l).hline(0, y + h - 1, W, T.d);
         p.clusters(1, y + 1, W - 2, Math.max(1, h - 2), T.d, 8, 3, seed).clusters(1, y + 1, W - 2, Math.max(1, h - 2), T.l, 4, 3, seed + 1);

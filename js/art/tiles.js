@@ -86,7 +86,7 @@
       pebble(p, x, y, 3 + Math.floor(h(140 + i) * 3), 2 + (h(150 + i) > 0.4 ? 1 : 0), ['#857b70', '#94897a', '#766d64'][i % 3]);
     }
     // raiz fina perto da superfície
-    if (depth <= 1 && h(160) > 0.55) {
+    if (depth <= 1 && h(160) > 0.8) {
       let x = Math.floor(h(161) * 20), y = y0 + 2 + Math.floor(h(162) * 6);
       for (let s = 0; s < 6; s++) { const w = 2 + Math.floor(h(163 + s) * 3); p.hline(x, y, w, '#8d6842'); p.hline(x, y + 1, w, T.d2); x += w; y += h(170 + s) > 0.5 ? 1 : 0; if (y > 30) break; }
     }
@@ -97,11 +97,10 @@
     dirtBody(k, 0, d);
     if (top) { // terra exposta: borda clara e irregular
       const T = G.Pix.tones(DIRT);
-      p0(k).hline(0, 0, S, T.l);
+      k.p.hline(0, 0, S, T.l);
       for (let x = 0; x < S; x += 3) if (k.h(200 + x) > 0.5) k.p.hline(x, 1, 2, T.l);
     }
   }
-  const p0 = (k) => k.p;
 
   /* ---------------- pedra ---------------- */
   function drawStone(k) {
@@ -154,30 +153,32 @@
   /* ---------------- cascalho (terreno baldio) ---------------- */
   const GRAVEL_COLS = ['#958b7c', '#7d7466', '#a89d8b', '#6b6356', '#8a8070'];
   function drawGravel(k) {
-    const { p, h } = k;
+    const { p, h, tx } = k;
     const top = k.open(0, -1);
-    p.rect(0, 0, S, S, '#5e5649');
-    // pedriscos em fileiras com deslocamento
-    let n = 0;
-    for (let y = 0; y < S; y += 3) {
-      const off = Math.floor(h(300 + y) * 4);
-      for (let x = -off; x < S; x += 4 + Math.floor(hx(k.tx * 9 + x, y + k.ty * 40, 1) * 2)) {
-        n++;
-        const w = 2 + Math.floor(h(n * 3) * 3), hh = 2 + (h(n * 3 + 1) > 0.6 ? 1 : 0);
-        pebble(p, x, y + (h(n * 3 + 2) > 0.5 ? 1 : 0), w, hh, GRAVEL_COLS[Math.floor(h(n + 500) * 5)]);
+    const T = G.Pix.tones('#7d7466');
+    p.rect(0, 0, S, S, T.b);
+    p.rect(0, 22, S, 10, G.Pix.mix(T.b, T.d, 0.5));
+    // pedriscos espaçados em fileiras desencontradas (coordenadas do mundo)
+    for (let y = 1, r = 0; y < 30; y += 5, r++) {
+      const wy = k.ty * 7 + r;
+      for (let wx = tx * S - 8 + ((r % 2) * 3); wx < tx * S + S; wx += 7) {
+        const q = hx(wx, wy, 1);
+        if (q < 0.25) continue;
+        const x = wx - tx * S + Math.floor(hx(wx, wy, 2) * 3), yy = y + Math.floor(hx(wx, wy, 3) * 2);
+        const w = 3 + Math.floor(hx(wx, wy, 4) * 3), hh = 2 + (q > 0.6 ? 1 : 0);
+        pebble(p, x, yy, w, hh, GRAVEL_COLS[Math.floor(hx(wx, wy, 5) * 5)]);
       }
     }
-    // escurece embaixo
-    alpha(k.c, 0.18, () => p.rect(0, 20, S, 12, '#2a2030'));
-    alpha(k.c, 0.12, () => p.rect(0, 26, S, 6, '#2a2030'));
+    // grãos miúdos em grupinhos
+    p.clusters(0, 0, S, S, T.d, 6, 2, tx * 19 + k.ty);
     if (top) {
-      alpha(k.c, 0.18, () => p.rect(0, 0, S, 5, '#fff4dc'));
-      p.hline(0, 0, S, '#a89d8b');
-      // tufos de mato
-      if (h(600) > 0.45) {
+      p.hline(0, 0, S, T.h); p.hline(0, 1, S, T.l);
+      // tufo de mato
+      if (h(600) > 0.5) {
         const x = 3 + Math.floor(h(601) * 24);
-        for (let b = 0; b < 5; b++) { const bx = x + b - 2, hh = 2 + Math.floor(h(610 + b) * 3); p.vline(bx, 3 - hh + 1 < 0 ? 0 : 4 - hh, hh, b % 2 ? '#5e8a3a' : '#7fae4a'); }
-        p.hline(x - 2, 4, 5, '#3f6a2e');
+        const Gr = G.Pix.tones('#6a9a40');
+        for (let b = -3; b <= 3; b++) { const hh = 6 - Math.abs(b) - Math.floor(h(610 + b + 3) * 2); p.vline(x + b, 7 - hh, hh, b % 2 ? Gr.d : Gr.b); p.px(x + b, 7 - hh, Gr.l); }
+        p.hline(x - 3, 7, 7, Gr.d2);
       }
     }
   }
@@ -232,9 +233,10 @@
     // remendo
     if (h(200) > 0.78) { const x = 2 + Math.floor(h(201) * 14), w = 8 + Math.floor(h(202) * 8); p.rect(x, 4, w, 10, '#323539'); p.hline(x, 4, w, '#45484d'); p.vline(x + w, 4, 11, '#2a2c30'); p.hline(x, 14, w, '#2a2c30'); }
     // rachadura em zigue-zague
-    if (h(210) > 0.66) {
-      let x = 3 + Math.floor(h(211) * 24);
-      for (let y = 2; y < 14; y += 2) { p.vline(x, y, 2, '#1f2125'); p.px(x + 1, y + 1, '#4c4f55'); x += h(212 + y) > 0.5 ? 1 : -1; }
+    if (h(210) > 0.86) {
+      let x = 3 + Math.floor(h(211) * 24), y = 2;
+      for (let s = 0; s < 5; s++) { const nx = x + (h(212 + s) > 0.5 ? 2 : -2); p.line(x, y, nx, y + 2, '#1f2125'); p.px(nx + 1, y + 2, '#4c4f55'); x = nx; y += 2; }
+      p.line(x, y, x + 3, y + 1, '#1f2125');
     }
     // borda superior gasta e trilha de pneu
     p.hline(0, 0, S, '#5b5f66'); p.hline(0, 1, S, '#4a4e54');
@@ -255,8 +257,9 @@
     for (let x = 5; x < 28; x += 3) { p.px(x, 1, '#5a5e64'); p.px(x + 1, 2, '#1a1b1e'); }
     p.hline(2, 6, 28, '#1c1d20');
     // poço escuro com anel de concreto
-    p.rect(6, 7, 20, 10, '#56595e'); p.rect(8, 7, 16, 10, '#16171a'); p.hline(8, 7, 16, '#0f1012');
-    p.vline(8, 8, 9, '#2a2c30');
+    p.rect(6, 7, 20, 17, '#56595e'); p.vline(6, 7, 17, '#6a6d72'); p.rect(9, 7, 14, 17, '#1d1e22'); p.hline(9, 7, 14, '#111214');
+    for (let y = 10; y < 24; y += 5) { p.hline(11, y, 10, '#6b6f75'); p.hline(11, y + 1, 10, '#2c2e32'); } // degraus de ferro
+    p.hline(6, 24, 20, '#2a2c30');
   }
 
   /* ---------------- calçada ---------------- */
@@ -450,19 +453,18 @@
       // veio vertical
       for (let g = 0; g < 2; g++) { const gx = x + 2 + Math.floor(hx(wb, ty * 3 + g, 4) * 3), gy = Math.floor(hx(wb, ty * 3 + g, 5) * 22); p.vline(gx, gy, 4 + Math.floor(hx(wb, ty, 6 + g) * 6), T.d); }
       // pregos
-      if (ty % 2 === 0) { p.px(x + 3, 4, T.o); p.px(x + 3, 3, T.h); }
-      else { p.px(x + 3, 26, T.o); p.px(x + 3, 25, T.h); }
+      if ((wb + ty) % 3 === 0) { p.px(x + 3, 4, T.o); p.px(x + 3, 3, T.h); p.px(x + 3, 26, T.o); p.px(x + 3, 25, T.h); }
       if (top) { p.hline(x, y0, 7, T.h); p.hline(x, y0 + 1, 7, T.l); }
     }
     // cartaz rasgado ou pichação
     const r = h(50);
-    if (!top && r > 0.82) {
+    if (!top && r > 0.9) {
       const pc = ['#e9d8a6', '#c0504d', '#6a8caf'][Math.floor(h(51) * 3)];
       const T = G.Pix.tones(pc);
       p.rect(7, 6, 16, 19, T.b); p.hline(7, 6, 16, T.l); p.rect(9, 9, 12, 5, T.d); p.rect(9, 16, 9, 1, T.d2); p.rect(9, 18, 11, 1, T.d2); p.rect(9, 20, 7, 1, T.d2);
       p.rect(20, 22, 3, 3, cols[0]); p.rect(7, 23, 2, 2, cols[0]); p.px(22, 6, cols[0]);
       alpha(c, 0.35, () => p.rect(7, 6, 16, 19, '#8b6a3e'));
-    } else if (!top && r > 0.62) {
+    } else if (!top && r > 0.8 && k.get(0, 1) === G.T.FENCE) {
       const pc = ['#4fa3d8', '#e05a8a', '#f2f2f2'][Math.floor(h(52) * 3)];
       let x = 4, y = 14 + Math.floor(h(53) * 6);
       for (let s = 0; s < 8; s++) { const nx = x + 2 + Math.floor(h(60 + s) * 2), ny = y + (s % 2 ? -4 : 3); p.line(x, y, nx, ny, pc); x = nx; y = ny; }
@@ -485,18 +487,18 @@
     const T = G.Pix.tones('#8a5a32');
     for (let i = 0; i < 8; i++) {
       const sx = (left ? i : 7 - i) * 4, sy = i * 4;          // degrau i: 4 px de piso, 4 de espelho
-      const hh = Math.min(9, S - sy);
+      const hh = Math.min(12, S - sy);
       p.rect(sx, sy, 4, hh, '#6d4a2a');                     // espelho / longarina
       p.rect(sx, sy + 3, 4, hh - 3, T.d);
       p.hline(sx, sy, 4, '#cf9a5e'); p.hline(sx, sy + 1, 4, '#b07a44'); // piso com quina clara
       p.hline(sx, sy + 2, 4, '#5a3b1f');
-      if (sy + 8 < S) p.hline(sx, sy + 8, 4, '#3f2914');
+      if (sy + 11 < S) p.hline(sx, sy + 11, 4, '#3f2914');
       p.px(left ? sx : sx + 3, sy + 1, '#e2b47a');           // brilho do bocel
     }
     // longarina: faixa lateral sob os degraus
     for (let i = 0; i < 8; i++) {
-      const sx = (left ? i : 7 - i) * 4, sy = i * 4 + 4;
-      if (sy + 4 < S) { p.rect(sx, sy + 3, 4, 2, '#4f3522'); p.px(sx + 1, sy + 4, '#8a5a32'); }
+      const sx = (left ? i : 7 - i) * 4, sy = i * 4 + 7;
+      if (sy + 4 < S) { p.rect(sx, sy, 4, 3, '#4f3522'); p.hline(sx, sy, 4, '#7a5432'); }
     }
   }
   function drawStairF(k) {

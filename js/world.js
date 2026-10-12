@@ -332,7 +332,7 @@
       { type: 'banco_ok', x: t(83) + 8, y: ground - 12, w: 30, h: 12, surfaces: [[2, 5, 26]] },
       { type: 'placa', x: t(80) + 4, y: ground - 26, w: 18, h: 26, text: 'PRAÇA' },
       // padaria
-      { type: 'letreiro', x: t(103), y: t(33) + 4, w: t(8), h: 12, text: 'PADARIA' },
+      { type: 'letreiro', x: t(103), y: t(33) + 4, w: t(8), h: 12, text: 'PADARIA', over: true },
       { type: 'toldo', x: t(98) + 6, y: t(35), w: 58, h: 12, front: true },
       { type: 'vaso_rua', x: t(100) + 2, y: ground - 12, w: 10, h: 12 },
       { type: 'lixeira', x: t(127) + 4, y: ground - 14, w: 9, h: 14 },
