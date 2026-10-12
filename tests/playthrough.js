@@ -331,7 +331,9 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
   const flyY = await ev(() => VG.game.player.y);
   await page.keyboard.up('KeyW');
   ok(flyY < 16 * 38 - 32 - 70, 'voa lá fora (subiu ' + Math.round(16 * 38 - 32 - flyY) + ' px)');
-  await wait(1500);
+  // desce segurando S até pousar (o voo controlado só acaba no chão)
+  await page.keyboard.down('KeyS'); await waitFor(() => VG.game.player.onGround, 5000); await page.keyboard.up('KeyS');
+  await wait(300);
   // teleporte
   await selectPower(7);
   const tx = await toClient(16 * 70, 16 * 38 - 13);

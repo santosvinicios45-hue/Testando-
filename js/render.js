@@ -351,7 +351,7 @@
       const seen = new Set();
       for (let i = 0; i < w.dirty.length; i += 2) {
         const x = w.dirty[i], y = w.dirty[i + 1];
-        for (const [dx, dy] of [[0, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dy] of [[0, 0], [0, 1], [0, -1], [1, 0], [-1, 0]]) {
           const k = (x + dx) + ',' + (y + dy);
           if (seen.has(k) || !w.inb(x + dx, y + dy)) continue;
           seen.add(k); this.redrawTile(w, x + dx, y + dy);

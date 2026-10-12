@@ -276,20 +276,20 @@
     let y0 = 0;
     if (top) {
       // pedra portuguesa: mosaico em ondas preto e branco
-      p.rect(0, 0, S, 7, '#8f8b83');
-      for (let row = 0; row < 3; row++) {
-        const off = row % 2 ? 1 : 0;
-        for (let x = -off; x < S; x += 3) {
+      p.rect(0, 0, S, 8, '#8f8b83');
+      for (let row = 0; row < 4; row++) {
+        const off = row % 2 ? 2 : 0;
+        for (let x = -off; x < S; x += 4) {
           const wx = tx * S + x;
-          const wave = 1 + Math.sin(wx / 9) * 1.4;
-          const black = Math.abs(row - wave) < 0.8;
-          const col = black ? (hx(wx, row, 3) > 0.5 ? '#45433f' : '#3a3936') : (hx(wx, row, 4) > 0.5 ? '#e8e4da' : '#d8d3c7');
-          p.rect(x, row * 2, 2, 1, col);
-          p.px(x, row * 2 + 1, black ? '#2c2b29' : '#bdb8ad');
+          const wave = 1.5 + Math.sin(wx / 10) * 1.6;
+          const black = Math.abs(row - wave) < 0.75;
+          const col = black ? (hx(wx, row, 3) > 0.5 ? '#4a4844' : '#3c3a37') : (hx(wx, row, 4) > 0.5 ? '#ebe7dd' : '#dcd7cb');
+          p.rect(x, row * 2, 3, 1, col);
+          p.hline(x + 1, row * 2 + 1, 2, black ? '#2c2b29' : '#b9b4a9');
         }
       }
-      p.hline(0, 6, S, '#76726a');
-      y0 = 7;
+      p.hline(0, 7, S, '#76726a');
+      y0 = 8;
     } else p.hline(0, 0, S, T.d);
     // laje de concreto com junta por bloco
     p.hline(0, y0, S, T.l);
@@ -321,7 +321,31 @@
     else p.hline(0, y0, S, G.Pix.mix(T.b, T.d, 0.5));
     p.hline(0, 30, S, G.Pix.mix(T.b, T.d, 0.6)); p.hline(0, 31, S, T.d);
   }
-  function drawConcrete(k) { concreteBody(k, 0, k.open(0, -1)); }
+  function drawConcrete(k) {
+    const { p, tx } = k, B = G.B;
+    const above = k.open(0, -1) ? k.bg(0, -1) : 0;
+    concreteBody(k, 0, k.open(0, -1));
+    // acabamento do piso conforme o ambiente de cima
+    if (above === B.LOBBY) { // granito polido em placas
+      for (let x = 0; x < S; x += 16) {
+        const T = G.Pix.tones(((tx * 2 + x / 16) % 2) ? '#7b6f66' : '#8a7e72');
+        p.rect(x, 0, 16, 6, T.b); p.hline(x, 0, 15, T.h); p.vline(x + 15, 0, 6, T.d2);
+        p.px(x + 4, 2, T.l); p.px(x + 10, 3, T.d); p.px(x + 7, 4, T.l);
+      }
+      p.hline(0, 6, S, '#4a4038');
+    } else if (above === B.PADARIA) { // lajotas de cerâmica
+      for (let x = 0; x < S; x += 8) {
+        const T = G.Pix.tones(((tx * 4 + x / 8) % 2) ? '#b4553a' : '#c2643f');
+        p.rect(x, 0, 8, 5, T.b); p.hline(x, 0, 7, T.l); p.vline(x + 7, 0, 5, T.d2);
+      }
+      p.hline(0, 5, S, '#6e3426');
+    } else if (above === B.CORREDOR) { // piso de granilite
+      const T = G.Pix.tones('#a39a8a');
+      p.rect(0, 0, S, 4, T.b); p.hline(0, 0, S, T.h);
+      for (let i = 0; i < 6; i++) p.px(Math.floor(k.h(300 + i) * 31), 1 + Math.floor(k.h(310 + i) * 2), i % 2 ? T.d : T.l);
+      p.hline(0, 4, S, T.d2);
+    }
+  }
   const WOODS = ['#a8713e', '#b07a46', '#9c6838'];
   function drawWood(k) {
     const { p, tx } = k;
@@ -728,12 +752,12 @@
   function outlet(p) { p.rect(20, 19, 5, 4, '#ece6d8'); p.px(21, 20, '#6b6050'); p.px(23, 20, '#6b6050'); p.hline(20, 22, 5, '#b9b0a0'); }
 
   function bgSala(k) { // papel de parede com listras e arabescos
-    const { p, tx, ty } = k;
+    const { p, tx } = k;
     const T = G.Pix.tones('#cdbf9f');
     p.rect(0, 0, S, S, T.b);
     for (let x = 0; x < S; x += 8) { p.rect(x + 2, 0, 2, S, G.Pix.mix(T.b, T.d, 0.35)); p.vline(x + 4, 0, S, G.Pix.mix(T.b, T.l, 0.4)); }
     for (let y = 0; y < S; y += 8) for (let x = 0; x < S; x += 8) {
-      const ox = x + 6 + ((ty * 4 + y / 8) % 2 ? 0 : 0), oy = y + 3 + ((x / 8 + tx) % 2) * 4;
+      const ox = x + 6, oy = y + 3 + ((x / 8 + tx) % 2) * 4;
       if (oy < S - 1) { p.px(ox, oy, G.Pix.mix(T.b, T.d, 0.5)); p.px(ox, oy + 1, G.Pix.mix(T.b, T.l, 0.5)); }
     }
   }
@@ -819,7 +843,11 @@
     const T = G.Pix.tones('#c9c4ba');
     p.rect(0, 0, S, S, T.b);
     // veios de mármore
-    if (h(1) > 0.4) { let x = Math.floor(h(2) * 28), y = 0; for (let s = 0; s < 8; s++) { p.line(x, y, x + 2, y + 4, G.Pix.mix(T.b, T.d, 0.4)); x += 2; y += 4; if (x > 30) break; } }
+    if (h(1) > 0.55) {
+      let x = 2 + Math.floor(h(2) * 24), y = 2 + Math.floor(h(3) * 8);
+      for (let s = 0; s < 5; s++) { const nx = x + (h(4 + s) > 0.4 ? 3 : -1), ny = y + 2 + Math.floor(h(10 + s) * 3); p.line(x, y, nx, ny, G.Pix.mix(T.b, T.d, 0.22)); x = nx; y = ny; if (y > 28) break; }
+    }
+    if (h(20) > 0.7) { const x = 3 + Math.floor(h(21) * 24), y = 4 + Math.floor(h(22) * 20); p.hline(x, y, 3, T.l); p.px(x + 3, y + 1, T.l); }
     p.vline(31, 0, S, G.Pix.mix(T.b, T.d, 0.5)); p.vline(0, 0, S, T.l);
     p.hline(0, 31, S, G.Pix.mix(T.b, T.d, 0.5)); p.hline(0, 0, S, T.l);
     if (k.ty === 37) {

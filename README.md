@@ -189,6 +189,13 @@ js/interact.js    objetos interativos fixos e portas
 js/save.js        salvar, carregar, validar e configurações
 js/characters.js  personagens em alta resolução: esqueleto, cinemática inversa, rasterização própria
 js/ambient.js     vida do cenário (folhagem, insetos, gato, vapor, poeira)
+js/pix.js         ferramentas de pixel art da grade fina (tons, contorno, sprites em cache)
+js/art/tiles.js     blocos e paredes (32×32 px)
+js/art/interior.js  móveis e objetos de dentro dos prédios
+js/art/props.js     objetos físicos e estruturas da praça
+js/art/exterior.js  rua, praça, padaria, telhado, veículos e animais
+js/art/skyline.js   céu, nuvens, sol/lua e cidade em camadas
+tests/look.js       captura de tela de qualquer ponto do mapa
 js/sprites.js     pixel art procedural (objetos, móveis, veículos, ícones)
 js/render.js      câmera, céu, paralaxe, blocos, luz e efeitos
 js/ui.js          interface em DOM
