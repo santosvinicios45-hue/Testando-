@@ -216,7 +216,8 @@
 
     resize() {
       const s = Math.min(window.innerWidth / G.VIEW_W, window.innerHeight / G.VIEW_H);
-      this.scale = this.settings.scaleMode === 'fit' ? Math.max(0.5, s) : Math.max(1, Math.floor(s));
+      // modo inteiro: múltiplo exato dos pixels finos (G.HI por unidade), sem pixels tortos
+      this.scale = this.settings.scaleMode === 'fit' ? Math.max(0.5, s) : Math.max(1, Math.floor(s * G.HI) / G.HI);
       const st = document.getElementById('stage');
       st.style.width = (G.VIEW_W * this.scale) + 'px';
       st.style.height = (G.VIEW_H * this.scale) + 'px';

@@ -200,6 +200,7 @@
       this.clouds = [];
       for (let i = 0; i < 7; i++) this.clouds.push({ x: Math.random() * 1400, y: 10 + Math.random() * 70, w: 30 + Math.random() * 50, s: 2 + Math.random() * 4 });
       this.buildSkyline();
+      this.sky = G.ArtSky ? G.ArtSky.create(this) : null;
       this.time = 0;
     }
 
@@ -327,16 +328,23 @@
     }
 
     initWorld(world) {
-      [this.bgCv, this.bgx] = mkCanvas(world.w * TS, world.h * TS);
-      [this.fgCv, this.fgx] = mkCanvas(world.w * TS, world.h * TS);
+      // blocos pré-desenhados na grade fina (G.HI pixels por unidade do mundo)
+      const HI = G.HI;
+      [this.bgCv, this.bgx] = mkCanvas(world.w * TS * HI, world.h * TS * HI);
+      [this.fgCv, this.fgx] = mkCanvas(world.w * TS * HI, world.h * TS * HI);
       for (let y = 0; y < world.h; y++) for (let x = 0; x < world.w; x++) this.redrawTile(world, x, y);
       world.dirty = [];
     }
     redrawTile(w, x, y) {
-      this.fgx.clearRect(x * TS, y * TS, TS, TS);
-      this.bgx.clearRect(x * TS, y * TS, TS, TS);
-      drawBg(this.bgx, w, w.getBg(x, y), x, y);
-      drawTile(this.fgx, w, w.get(x, y), x, y);
+      const HI = G.HI, A = G.ArtTiles;
+      this.fgx.clearRect(x * TS * HI, y * TS * HI, TS * HI, TS * HI);
+      this.bgx.clearRect(x * TS * HI, y * TS * HI, TS * HI, TS * HI);
+      for (const [cx, layer, id, fine, old] of [[this.bgx, 'bg', w.getBg(x, y), A && A.drawBg, drawBg], [this.fgx, 'fg', w.get(x, y), A && A.drawTile, drawTile]]) {
+        // arte fina quando existe; senão, a textura antiga ampliada
+        if (fine && fine(cx, w, id, x, y) !== false) continue;
+        cx.save(); cx.beginPath(); cx.rect(x * TS * HI, y * TS * HI, TS * HI, TS * HI); cx.clip(); cx.scale(HI, HI); old(cx, w, id, x, y); cx.restore();
+        void layer;
+      }
     }
     flushDirty(w) {
       if (!w.dirty.length) return;
@@ -365,7 +373,7 @@
     snapCamera() {
       const p = this.g.player;
       this.camF.x = p.cx - VW / 2; this.camF.y = p.cy - VH / 2 - 20;
-      this.clampCam(); this.cam.x = Math.round(this.camF.x); this.cam.y = Math.round(this.camF.y);
+      this.clampCam(); this.cam.x = Math.round(this.camF.x * G.HI) / G.HI; this.cam.y = Math.round(this.camF.y * G.HI) / G.HI;
     }
     clampCam() {
       const w = this.g.world, p = this.g.player;
@@ -386,7 +394,7 @@
       this.clampCam();
       let sx = 0, sy = 0;
       if (this.shakeT > 0) { this.shakeT -= dt; sx = U.rand(-1, 1) * this.shakeA; sy = U.rand(-1, 1) * this.shakeA; if (this.shakeT <= 0) this.shakeA = 0; }
-      this.cam.x = Math.round(this.camF.x + sx); this.cam.y = Math.round(this.camF.y + sy);
+      this.cam.x = Math.round((this.camF.x + sx) * G.HI) / G.HI; this.cam.y = Math.round((this.camF.y + sy) * G.HI) / G.HI;
       this.freezeAmt = U.approach(this.freezeAmt, this.freezeGoal, dt * 2.5);
       if (this.freezeAmt <= 0) this.freezeTarget = this.freezeGoal ? this.freezeTarget : null;
       if (this.glitchT > 0) this.glitchT -= dt;
@@ -394,6 +402,7 @@
       if (this.starsT > 0) this.starsT -= dt;
       for (const r of this.ripples) r.t += dt;
       this.ripples = this.ripples.filter((r) => r.t < 0.9);
+      if (this.sky) this.sky.update(dt);
       for (const c of this.clouds) { c.x += c.s * dt; if (c.x > 1500) c.x = -80; }
       for (const v of this.traffic) { v.x += v.dir * v.v * dt; if (v.x > 1440) v.x -= 1440; if (v.x < 0) v.x += 1440; }
       this.birdT -= dt;
@@ -411,7 +420,7 @@
     render() {
       const g = this.g, c = this.ctx, cam = this.cam;
       if (!g.world) return;
-      // o mundo é desenhado na grade de 480×270; personagens e efeitos usam G.hi() para a grade fina
+      // coordenadas do mundo com escala G.HI; arte fina usa G.hi() (1 unidade = 1 pixel da tela)
       c.setTransform(G.HI, 0, 0, G.HI, 0, 0); c.imageSmoothingEnabled = false;
       this.flushDirty(g.world);
       const min = g.clock.min;
@@ -420,23 +429,26 @@
       const ps = g.powers;
       const perc = ps && ps.perceive;
 
+      if (this.sky) this.sky.draw(c, cam, min, night);
+      else {
       // céu
-      const [top, bot] = G.skyAt(min);
-      const grad = c.createLinearGradient(0, 0, 0, VH);
-      grad.addColorStop(0, top); grad.addColorStop(1, bot);
-      c.fillStyle = grad; c.fillRect(0, 0, VW, VH);
-      this.drawSkyBodies(c, min, night);
-      // paralaxe
-      const groundY = 38 * TS - cam.y;
-      this.drawLayer(c, this.hills, 0.04, groundY - 70, night);
-      this.drawLayer(c, this.farSky, 0.1, groundY - 34, night);
-      this.drawSkyLife(c, night);
-      this.drawLayer(c, this.midSky, 0.22, groundY - 14, night);
-      this.drawLayer(c, this.viaduct, 0.32, groundY - 18, night);
-      this.drawTraffic(c, 0.32, groundY - 18 - 40 + 6, night);
-      this.drawLayer(c, this.nearSky, 0.42, groundY + 4, night);
-      this.drawLayer(c, this.trees, 0.55, groundY, night);
+        const [top, bot] = G.skyAt(min);
+        const grad = c.createLinearGradient(0, 0, 0, VH);
+        grad.addColorStop(0, top); grad.addColorStop(1, bot);
+        c.fillStyle = grad; c.fillRect(0, 0, VW, VH);
+        this.drawSkyBodies(c, min, night);
+        // paralaxe
+        const groundY = 38 * TS - cam.y;
+        this.drawLayer(c, this.hills, 0.04, groundY - 70, night);
+        this.drawLayer(c, this.farSky, 0.1, groundY - 34, night);
+        this.drawSkyLife(c, night);
+        this.drawLayer(c, this.midSky, 0.22, groundY - 14, night);
+        this.drawLayer(c, this.viaduct, 0.32, groundY - 18, night);
+        this.drawTraffic(c, 0.32, groundY - 18 - 40 + 6, night);
+        this.drawLayer(c, this.nearSky, 0.42, groundY + 4, night);
+        this.drawLayer(c, this.trees, 0.55, groundY, night);
 
+      }
       // o que há atrás das paredes (só aparece com Percepção)
       if (perc) {
         for (const [id, reg] of Object.entries(g.regions)) {
@@ -605,16 +617,17 @@
     /** Desenha uma camada do mundo; com Percepção ativa, fica translúcida dentro do círculo. */
     drawWorldLayer(c, cv, perc, alphaIn) {
       const cam = this.cam;
-      if (!perc) { c.drawImage(cv, cam.x, cam.y, VW, VH, 0, 0, VW, VH); return; }
+      const HI = G.HI;
+      if (!perc) { c.drawImage(cv, cam.x * HI, cam.y * HI, VW * HI, VH * HI, 0, 0, VW, VH); return; }
       const px = perc.x - cam.x, py = perc.y - cam.y;
       c.save();
       c.beginPath(); c.rect(0, 0, VW, VH); c.arc(px, py, perc.r, 0, Math.PI * 2, true); c.clip('evenodd');
-      c.drawImage(cv, cam.x, cam.y, VW, VH, 0, 0, VW, VH);
+      c.drawImage(cv, cam.x * HI, cam.y * HI, VW * HI, VH * HI, 0, 0, VW, VH);
       c.restore();
       c.save();
       c.beginPath(); c.arc(px, py, perc.r, 0, Math.PI * 2); c.clip();
       c.globalAlpha = alphaIn;
-      c.drawImage(cv, cam.x, cam.y, VW, VH, 0, 0, VW, VH);
+      c.drawImage(cv, cam.x * HI, cam.y * HI, VW * HI, VH * HI, 0, 0, VW, VH);
       c.restore();
     }
 
@@ -673,13 +686,13 @@
     }
 
     drawNPC(c, n, cam) {
-      const x = Math.round(n.x - cam.x), y = Math.round(n.y - cam.y);
+      const x = n.x - cam.x, y = n.y - cam.y;
       if (x < -40 || x > VW + 40) return;
       const base = { skin: '#c68e64', skinS: '#a46f48', hair: '#2a1b14', shirt: '#4a8a5a', shirtS: '#356b43', pants: '#3b3b48', pantsS: '#2b2b36', shoe: '#2b2b2b', eye: '#1a1010', belt: '#3a2a1a' };
       const st = n.moving ? 'walk' : 'idle';
       switch (n.kind) {
         case 'passeador':
-          G.Sprites.human(c, x, y, { facing: n.facing, state: st, t: n.anim / 9, pal: base, seed: 1 });
+          G.Sprites.human(c, x, y, { facing: n.facing, state: st, t: n.anim / 9, pal: Object.assign({}, base, { shirt: '#3f8a5e', pants: '#4a5d7a', shoe: '#e6e2da', hair: '#3a2a1c' }), beard: '#3a2a1c', seed: 1 });
           G.Sprites.dog(c, Math.round(n.dog.x - cam.x), Math.round(n.dog.y - cam.y), n.dog.dir, n.dog.anim);
           c.strokeStyle = '#c0392b'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + (n.facing > 0 ? 8 : 2), y + 20); c.lineTo(Math.round(n.dog.x - cam.x) + (n.dog.dir > 0 ? 9 : 3), Math.round(n.dog.y - cam.y) + 1); c.stroke();
           break;
@@ -692,18 +705,18 @@
           R(c, x + 7, y + 17, 5, 6, '#8e4b2c'); R(c, x + 7, y + 17, 5, 1, '#a65e3a');
           break;
         case 'casal_a':
-          G.Sprites.human(c, x, y, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { shirt: '#b03a48', shirtS: '#8a2c38', hair: '#5a3a22' }), hairStyle: 'long', gesture: n.sayT > 0 ? Math.round(Math.abs(n.anim) * 3) : 0, seed: 4 });
+          G.Sprites.human(c, x, y, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#e2b28c', shirt: '#b8323e', hair: '#7a5232', pants: '#2c2a36', shoe: '#5a3a26' }), hairStyle: 'long', jacket: true, inner: '#f1e6d6', gesture: n.sayT > 0 ? Math.round(Math.abs(n.anim) * 3) : 0, seed: 4 });
           break;
         case 'casal_b':
-          G.Sprites.human(c, x, y, { facing: -1, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#8d5a3b', skinS: '#6e432a', shirt: '#2e6f8e', shirtS: '#235a73', hair: '#111' }), gesture: n.sayT > 0 ? Math.round(Math.abs(n.anim) * 3) : 0, seed: 5 });
+          G.Sprites.human(c, x, y, { facing: -1, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#7a4a2e', shirt: '#2f7f95', hair: '#141218', pants: '#2a2c36', shoe: '#2a2220' }), longSleeve: true, gesture: n.sayT > 0 ? Math.round(Math.abs(n.anim) * 3) : 0, seed: 5 });
           break;
         case 'crianca': {
           const jump = n.anim > 0.6 ? 2 : 0;
-          G.Characters.draw(c, x + 5, y + n.h - jump, { kid: true, facing: n.facing, state: n.moving ? 'walk' : 'idle', t: n.moving ? n.anim / 9 : n.t, pal: Object.assign({}, base, { skin: '#c68e64', shirt: '#f39c12', pants: '#2e86c1', hair: '#3b2416', shoe: '#e9e3d6' }), seed: 7, gesture: n.anim > 0.3 && !n.moving ? 4 : 0 });
+          G.Characters.draw(c, x + 5, y + n.h - jump, { kid: true, facing: n.facing, state: n.moving ? 'walk' : 'idle', t: n.moving ? n.anim / 9 : n.t, pal: Object.assign({}, base, { skin: '#c68e64', shirt: '#f2b51c', pants: '#3f6fb0', hair: '#5a3a20', shoe: '#f0ece4' }), jacket: true, inner: '#3e7cc4', seed: 7, gesture: n.anim > 0.3 && !n.moving ? 4 : 0 });
           break;
         }
         case 'porteiro':
-          G.Sprites.human(c, x, y, { facing: n.facing, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#a9714b', skinS: '#8a5a3a', shirt: '#34495e', shirtS: '#2c3e50', hair: '#d0d0d0' }), seed: 8 });
+          G.Sprites.human(c, x, y, { facing: n.facing, state: 'idle', t: n.t, pal: Object.assign({}, base, { skin: '#a9714b', shirt: '#2c3e5c', hair: '#cfcfcf', pants: '#2a3242' }), jacket: true, beard: '#bdbdbd', hairStyle: 'short', seed: 8 });
           break;
         case 'atendente':
           G.Sprites.human(c, x, y, { facing: 1, state: 'idle', t: n.t, pal: Object.assign({}, base, { shirt: '#d9d4c7', shirtS: '#bfb9aa', skin: '#d8a27a' }), apron: true, hairStyle: 'cap', seed: 6 });
@@ -725,8 +738,8 @@
     speech(c, x, y, text, alpha) {
       G.hi(c, (S) => {
         c.save(); c.globalAlpha = alpha;
-        c.font = '16px "VT323", monospace'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-        const tw = Math.ceil(c.measureText(text).width) + 10, th = 15;
+        c.font = '12px "VT323", monospace'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+        const tw = Math.ceil(c.measureText(text).width) + 8, th = 12;
         const bx = Math.round(x * S - tw / 2), by = Math.round(y * S - th - 6);
         c.fillStyle = '#2a2236';
         c.fillRect(bx + 1, by - 1, tw - 2, th + 2); c.fillRect(bx - 1, by + 1, tw + 2, th - 2); c.fillRect(bx, by, tw, th);
@@ -736,7 +749,7 @@
         const tx = Math.round(x * S);
         c.fillStyle = '#2a2236'; c.fillRect(tx - 3, by + th, 7, 2); c.fillRect(tx - 1, by + th + 2, 3, 2); c.fillRect(tx, by + th + 4, 1, 1);
         c.fillStyle = '#fbf6ea'; c.fillRect(tx - 2, by + th - 1, 5, 2); c.fillRect(tx, by + th + 1, 1, 2);
-        c.fillStyle = '#2a2236'; c.fillText(text, Math.round(x * S), by + th - 3);
+        c.fillStyle = '#2a2236'; c.fillText(text, Math.round(x * S), by + th - 2);
         c.restore();
       });
     }

@@ -18,7 +18,8 @@
 (function (G) {
   'use strict';
 
-  const BW = 64, BH = 104, AX = 30, AY = 84;
+  const K = (G.HI || 3) / 2;                 // o esqueleto foi medido na grade 2×; escala para a grade atual
+  const BW = Math.round(64 * K), BH = Math.round(104 * K), AX = Math.round(30 * K), AY = Math.round(84 * K);
   const cache = new Map();
 
   /* ---------------- cores ---------------- */
@@ -195,14 +196,16 @@
     '.ssssssssssl.',
     '.sssssssssssl',
     '.sssssssssssl',
+    '.sssssssssssl',
     'ddssssssssssl',
     'dDdsssssssssl',
     'dDdssssssssss',
     '.ddssssssssssn',
     '..dsssssssssd',
-    '..ddsssssssd.',
-    '...ddsssssd..',
-    '.....dddd....',
+    '..dssssssssd.',
+    '..ddssssssd..',
+    '...ddsssdd...',
+    '.....ddd.....',
   ];
   // cabelos: h base, H luz, k sombra (origem: 3 px à esquerda e 6 px acima do rosto)
   const HAIR = {
@@ -281,12 +284,12 @@
   };
 
   /* ---------------- proporções ---------------- */
-  function rigDims(o) {
-    const k = o.kid ? 0.6 : 1;
+  function rigDims(o, unscaled) {
+    const k = o.kid ? 0.6 : 1, s = unscaled ? 1 : K;
     return {
-      k, foot: 3, thigh: 13.5 * k, shin: 13 * k, torso: 20 * k + (o.kid ? 1 : 0),
-      upper: 11 * k + (o.kid ? 1 : 0), fore: 10 * k + (o.kid ? 1 : 0), neck: 2,
-      hipY: -(3 + 26.5 * k), legR: o.kid ? 2.4 : 3.4, armR: o.kid ? 2 : 2.6,
+      k, foot: 3 * s, thigh: 13.5 * k * s, shin: 13 * k * s, torso: (20 * k + (o.kid ? 1 : 0)) * s,
+      upper: (11 * k + (o.kid ? 1 : 0)) * s, fore: (10 * k + (o.kid ? 1 : 0)) * s, neck: 2 * s,
+      hipY: -(3 + 26.5 * k) * s, legR: (o.kid ? 2.4 : 3.4) * s, armR: (o.kid ? 2 : 2.6) * s,
     };
   }
 
@@ -317,7 +320,14 @@
   }
 
   function makePose(o, kind, f) {
-    const D = rigDims(o);
+    const P = makePoseBase(o, kind, f);
+    // medidas da pose estão na grade 2×: escala para a grade atual
+    P.hipX *= K; P.hipY *= K; P.headDY = Math.round(P.headDY * K); P.chest = Math.round(P.chest * K);
+    for (const L of P.legs) { L.x *= K; L.up *= K; }
+    return P;
+  }
+  function makePoseBase(o, kind, f) {
+    const D = rigDims(o, true);
     const P = {
       hipX: 0, hipY: D.hipY, lean: 0, headDY: 0, chest: 0,
       legs: [{ x: -3, up: 0, ang: 0 }, { x: 3, up: 0, ang: 0 }],   // [trás, frente]
@@ -337,17 +347,17 @@
       P.arms = run
         ? [{ u: -0.85 * sw(b.x) * 0.9, f: 1.5 }, { u: -0.85 * sw(a.x) * 0.9, f: 1.5 }]
         : [{ u: 0.42 * sw(a.x) - 0.02, f: 0.2 + 0.25 * Math.max(0, 0.42 * sw(a.x)) }, { u: 0.42 * sw(b.x) + 0.02, f: 0.22 + 0.3 * Math.max(0, 0.42 * sw(b.x)) }];
-      P.hairFlow = run ? -1 : 0;
+      P.hairFlow = run ? -1 : 0; P.mouth = run ? 1 : 0;
       P.chest = Math.round(Math.cos(ph * Math.PI * 4) * 0.5);
     } else if (kind === 'idle') {
       P.chest = f >= 2 ? 1 : 0; P.headDY = f >= 2 ? 1 : 0;
       if (pocket) P.arms = [{ mode: 'pocket' }, { mode: 'pocket' }];
     } else if (kind === 'wave') {
-      P.arms = [{ u: -0.05, f: 0.15 }, { u: 2.6, f: 0.35 + [0, 0.35, 0.6, 0.35][f] }];
+      P.arms = [{ u: -0.05, f: 0.15 }, { u: 2.6, f: 0.35 + [0, 0.35, 0.6, 0.35][f] }]; P.mouth = 1;
     } else if (kind === 'jump') {
       P.legs = [{ x: -6, up: 7, ang: 0.6 }, { x: 5, up: 11, ang: 0.3 }];
       P.arms = [{ u: -0.9, f: 0.3 }, { u: 2.5, f: 0.3 }];
-      P.hairFlow = 1;
+      P.hairFlow = 1; P.eyes = 'happy'; P.mouth = 2;
     } else if (kind === 'fall') {
       P.legs = [{ x: -5, up: 3, ang: 0.4 }, { x: 5, up: 5, ang: 0.2 }];
       P.arms = f % 2 ? [{ u: 2.1, f: 0.3 }, { u: 1.7, f: 0.4 }] : [{ u: 1.8, f: 0.4 }, { u: 2.3, f: 0.25 }];
@@ -357,7 +367,7 @@
       P.lean = 0.32; P.hipY = D.hipY - 1 + Math.round(w);
       P.legs = [{ x: -13, up: 9 + w, ang: 1.0 }, { x: -9, up: 5 - w, ang: 0.9 }];
       P.arms = [{ u: -0.7, f: 0.2 }, { u: 2.2, f: 0.05 }];
-      P.hairFlow = -2 + (f % 2 ? 0 : -1);
+      P.hairFlow = -2 + (f % 2 ? 0 : -1); P.mouth = 1;
     } else if (kind === 'sit') {
       P.legMode = 'sit'; P.hipY = -3;
       P.arms = pocket ? [{ mode: 'pocket' }, { mode: 'pocket' }] : [{ u: 0.3, f: 0.9 }, { u: 0.45, f: 0.95 }];
@@ -385,6 +395,113 @@
     return P;
   }
 
+  /* ---------------- cabeça (rosto e cabelo desenhados por partes) ---------------- */
+  /** Mancha elíptica: fn(x, y, nx, ny) devolve a cor (32 bits) ou 0 para pular; nx/ny = posição normalizada. */
+  function blob(B, cx, cy, rx, ry, fn) {
+    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+      const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
+      if (nx * nx + ny * ny > 1) continue;
+      const c = fn(x, y, nx, ny);
+      if (c) B.set(x, y, c);
+    }
+  }
+  /** Mecha de cabelo: triângulo da base até a ponta, com lado escuro e fio de brilho. */
+  function spike(B, ox, oy, u, sp, flow, T) {
+    const [bx, by, tx0, ty, w] = sp;
+    const tx = tx0 + flow;
+    const dx = tx - bx, dy = ty - by, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    const pts = [[ox + (bx + nx * w) * u, oy + (by + ny * w) * u], [ox + tx * u, oy + ty * u], [ox + (bx - nx * w) * u, oy + (by - ny * w) * u]];
+    poly(B, pts, T, (x, y, uu, v) => (uu < 0.14 ? 0 : uu < 0.38 ? 1 : (uu > 0.6 && uu < 0.74 && v > 0.15 && v < 0.75) ? 3 : 2));
+  }
+  const SPIKES = {
+    spiky: {
+      top: [[3, 4, -5, 0, 4], [5, 1, -2, -7, 4.2], [9, 0, 6, -9, 4.4], [13, 0, 14, -8, 4], [16.5, 2, 21.5, -3, 3.6], [2.5, 8, -4, 10, 3.2]],
+      fringe: [[8, 4, 8.5, 10, 2.8], [11, 4, 12, 11, 3], [14, 4, 16, 10.5, 3], [17, 4, 20, 8.5, 2.6]],
+      mass: [9.5, 4.5, 10.5, 7],
+    },
+    short: {
+      top: [[5, 0, 3, -4, 3], [10, -1, 10, -5, 3.2], [14.5, 0, 17, -3, 3], [2, 5, -2, 6, 2.5]],
+      fringe: [[11, 3, 12, 6.5, 2.4], [14.5, 3, 16.5, 6.5, 2.2]],
+      mass: [9.5, 4.5, 10, 5.5],
+    },
+    long: { top: [[6, 0, 5, -3, 3], [12, -1, 13, -3, 3]], fringe: [[12, 3, 13, 7, 3], [16, 3, 18, 7, 2.4]], mass: [9.5, 4.5, 10.5, 6] },
+    bun: { top: [], fringe: [[13, 3, 14, 6, 2.6], [16, 3, 18, 6, 2.2]], mass: [9.5, 4.5, 10, 5.5] },
+  };
+  function drawHead(B, o, P, pal, hx, hy, skinT, hairT, style, backOnly) {
+    const u = K / 1.5;
+    const at = (x, y) => [Math.round(hx + x * u), Math.round(hy + y * u)];
+    const put = (x, y, col) => { const [a, b] = at(x, y); B.set(a, b, col); };
+    const flow = (P.hairFlow || 0) * 2;
+    if (backOnly) {
+      // cabelo comprido: cortina atrás dos ombros (desenhada antes do corpo)
+      poly(B, [at(-1, 3), at(9, 3), at(10, 30), at(5, 33), at(-3, 30)], hairT, (x, y, uu) => (uu < 0.25 ? 0 : uu < 0.5 ? 1 : 2));
+      return;
+    }
+    // rosto: crânio + mandíbula, iluminado de frente
+    const skinShade = (x, y, nx, ny) => { const l = nx * 0.55 - ny * 0.5; return l > 0.42 ? skinT[3] : l < -0.5 ? skinT[1] : skinT[2]; };
+    blob(B, hx + 10 * u, hy + 9 * u, 9.5 * u, 9.5 * u, skinShade);
+    poly(B, [at(2.5, 9), at(19.5, 9), at(19.8, 13), at(17.5, 17), at(13.5, 20), at(10, 20.4), at(6, 18.5), at(3, 14)], skinT, (x, y, uu, v) => (uu < 0.22 ? 1 : (v > 0.82 && uu < 0.8) ? 1 : uu > 0.8 && v < 0.4 ? 3 : 2));
+    // cabelo: massa, mechas de cima e de trás
+    const S = SPIKES[style];
+    const hairShade = (x, y, nx, ny) => (ny > 0.4 || nx < -0.6 ? hairT[1] : hairT[2]);
+    if (S) {
+      const [mx, my, rx, ry] = S.mass;
+      blob(B, hx + mx * u, hy + my * u, rx * u, ry * u, (x, y, nx, ny) => ((y - hy) / u <= 7.5 || (x - hx) / u <= 5.5) ? hairShade(x, y, nx, ny) : 0);
+      blob(B, hx + 4 * u, hy + 8 * u, 5 * u, 5.5 * u, (x, y, nx, ny) => ((x - hx) / u <= 5.5 && (y - hy) / u <= 11) ? hairShade(x, y, nx, ny) : 0);
+      for (const sp of S.top) spike(B, hx, hy, u, sp, flow * (sp[3] < 0 ? 1 : 0.5), hairT);
+    } else if (style === 'bald') {
+      blob(B, hx + 4 * u, hy + 10 * u, 3 * u, 3.5 * u, hairShade);
+    }
+    if (style === 'bun') blob(B, hx + 2 * u, hy - 1 * u, 4.5 * u, 4.5 * u, hairShade);
+    // orelha
+    blob(B, hx + 4.5 * u, hy + 11.5 * u, 2.2 * u, 3 * u, () => skinT[1]);
+    put(4, 11, skinT[0]); put(4, 12, skinT[0]); put(5, 10, skinT[2]);
+    // olhos
+    const lash = c32('#1a1218'), white = c32('#f6f2ea'), iris = c32(mix(pal.eye || '#3a2414', '#6b4423', 0.45)), pupil = c32('#120c10'), hl = c32('#ffffff');
+    const eyes = P.eyes;
+    if (eyes === 'closed') {
+      for (let x = 8; x <= 10; x++) put(x, 12, lash); for (let x = 13; x <= 16; x++) put(x, 12, lash); put(17, 11, lash);
+    } else if (eyes === 'happy') {
+      put(8, 12, lash); put(9, 11, lash); put(10, 12, lash); put(13, 12, lash); put(14, 11, lash); put(15, 11, lash); put(16, 12, lash);
+    } else if (eyes === 'dizzy') {
+      for (const ex of [8, 13]) { put(ex, 10, lash); put(ex + 2, 10, lash); put(ex + 1, 11, lash); put(ex, 12, lash); put(ex + 2, 12, lash); }
+    } else {
+      for (let x = 8; x <= 10; x++) put(x, 10, lash);
+      for (let x = 13; x <= 16; x++) put(x, 10, lash); put(17, 11, lash);
+      put(8, 11, white); put(9, 11, iris); put(10, 11, pupil); put(10, 10, lash);
+      put(8, 12, skinT[1]); put(9, 12, iris); put(10, 12, iris);
+      put(13, 11, white); put(14, 11, iris); put(15, 11, pupil); put(16, 11, white);
+      put(13, 12, white); put(14, 12, iris); put(15, 12, iris); put(16, 12, skinT[1]);
+      put(14, 11, hl);                                                    // brilho no olho
+      put(14, 13, skinT[1]); put(15, 13, skinT[1]);                      // pálpebra de baixo
+    }
+    // sobrancelhas
+    if (style !== 'helmet') { const br = hairT[0]; put(8, 8, br); put(9, 8, br); put(10, 8, br); put(13, 8, br); put(14, 8, br); put(15, 7, br); put(16, 7, br); put(14, 7, br); }
+    // nariz, bochecha, boca
+    put(19, 11, skinT[3]); put(20, 12, skinT[2]); put(20, 13, skinT[1]); put(19, 14, skinT[1]); put(18, 14, skinT[1]);
+    put(16, 14, c32(mix(pal.skin, '#e2706a', 0.32))); put(17, 14, c32(mix(pal.skin, '#e2706a', 0.25)));
+    const md = skinT[0];
+    if (P.mouth === 2) { put(13, 16, md); put(14, 17, md); put(15, 17, md); put(16, 17, md); put(17, 16, md); put(14, 16, white); put(15, 16, white); put(16, 16, white); }
+    else if (P.mouth === 1) { put(13, 16, md); put(14, 17, md); put(15, 17, md); put(16, 16, md); }
+    else { put(14, 17, skinT[1]); put(15, 17, md); put(16, 17, skinT[1]); }
+    put(10, 19, skinT[1]); put(11, 19, skinT[1]);
+    if (o.beard) { const bt = tones(o.beard); poly(B, [at(4, 13), at(19, 14), at(18, 18), at(13.5, 21), at(9, 20.5), at(5, 17)], bt, (x, y, uu) => (uu < 0.25 ? 1 : 2)); put(15, 17, bt[0]); }
+    if (o.glasses) { const gc = c32('#1c1e26'); for (let x = 7; x <= 18; x++) put(x, 9, gc); for (const gx of [7, 11, 12, 17]) { put(gx, 10, gc); put(gx, 11, gc); put(gx, 12, gc); } }
+    // franja por cima da testa
+    if (S) for (const sp of S.fringe) spike(B, hx, hy, u, sp, flow * 0.4, hairT);
+    if (style === 'helmet') {
+      const hc = tones(o.helmet || '#c0392b');
+      blob(B, hx + 10 * u, hy + 7 * u, 11.5 * u, 10.5 * u, (x, y, nx, ny) => { const l = -nx * 0.5 - ny * 0.7; return l > 0.4 ? hc[3] : l < -0.4 ? hc[1] : hc[2]; });
+      poly(B, [at(13, 6), at(22, 6), at(22.5, 13), at(13, 13)], tones('#252a36'), (x, y, uu, v) => (v < 0.3 && uu > 0.3 ? 3 : 1));
+      poly(B, [at(-2, 12), at(6, 12), at(6, 15), at(-2, 15)], hc, () => 1);
+    } else if (style === 'cap') {
+      const cc = tones(o.cap || '#f1efe8');
+      blob(B, hx + 9.5 * u, hy + 3 * u, 10.5 * u, 5.5 * u, (x, y, nx, ny) => (ny > 0.25 ? 0 : (-nx * 0.5 - ny * 0.7 > 0.35 ? cc[3] : cc[2])));
+      poly(B, [at(15, 4.5), at(26, 5.5), at(26, 7.5), at(15, 7.5)], cc, (x, y, uu, v) => (v > 0.6 ? 1 : 2));
+      for (let x = 0; x <= 19; x++) put(x, 4.5, cc[1]);
+    }
+  }
+
   /* ---------------- desenho de um quadro ---------------- */
   function paint(B, o, P) {
     const pal = o.pal || G.PAL_V;
@@ -402,10 +519,10 @@
     const up = { x: Math.sin(P.lean), y: -Math.cos(P.lean) };          // eixo do tronco
     const side = { x: -up.y, y: up.x };                                  // perpendicular (para a frente)
     const along = (a, s) => ({ x: hip.x + up.x * a + side.x * s, y: hip.y + up.y * a + side.y * s });
-    const sh = along(D.torso - 2 - P.chest * 0.0, 0);                    // centro dos ombros
-    const shoulders = [{ x: sh.x - 3, y: sh.y + 1 + P.chest }, { x: sh.x + 3, y: sh.y + 1 + P.chest }];
-    const neckTop = along(D.torso + D.neck, 1);
-    const hips = [{ x: hip.x - 2, y: hip.y }, { x: hip.x + 2, y: hip.y }];
+    const sh = along(D.torso - 2 * K, 0);                    // centro dos ombros
+    const shoulders = [{ x: sh.x - 3 * K, y: sh.y + K + P.chest }, { x: sh.x + 3 * K, y: sh.y + K + P.chest }];
+    const neckTop = along(D.torso + D.neck, K);
+    const hips = [{ x: hip.x - 2 * K, y: hip.y }, { x: hip.x + 2 * K, y: hip.y }];
 
     // --- pernas ---
     const legData = [];
@@ -413,12 +530,12 @@
       const H = hips[i];
       let ankle, knee, ang;
       if (P.legMode === 'sit') {
-        knee = { x: H.x + D.thigh - 1, y: H.y - 1 + i };
-        ankle = { x: knee.x + 1 - i * 2, y: knee.y + D.shin };
+        knee = { x: H.x + D.thigh - K, y: H.y - K + i * K };
+        ankle = { x: knee.x + K - i * 2 * K, y: knee.y + D.shin };
         ang = 0;
       } else if (P.legMode === 'sitFloor') {
-        knee = { x: H.x + 10 - i * 2, y: H.y - 7 + i * 2 };
-        ankle = { x: H.x + 18 - i * 2, y: AY - 3 };
+        knee = { x: H.x + (10 - i * 2) * K, y: H.y + (-7 + i * 2) * K };
+        ankle = { x: H.x + (18 - i * 2) * K, y: AY - 3 * K };
         ang = -0.25;
       } else {
         const L = P.legs[i];
@@ -426,7 +543,7 @@
         ang = L.ang;
         const dx = ankle.x - H.x, dy = ankle.y - H.y;
         let d = Math.hypot(dx, dy);
-        const maxD = D.thigh + D.shin - 0.15;
+        const maxD = D.thigh + D.shin - 0.2;
         if (d > maxD) { ankle = { x: H.x + dx / d * maxD, y: H.y + dy / d * maxD }; d = maxD; }
         const a = Math.acos(Math.max(-1, Math.min(1, (D.thigh * D.thigh + d * d - D.shin * D.shin) / (2 * D.thigh * d))));
         const phi = Math.atan2(ankle.y - H.y, ankle.x - H.x);
@@ -443,7 +560,7 @@
       if (A.mode === 'pocket') {
         if (i === 0) { armData.push(null); continue; }   // o braço de trás fica escondido atrás do corpo
         // mão dentro do bolso canguru: braço desce rente ao corpo e o antebraço entra no bolso
-        const pocketP = along(5, 3);
+        const pocketP = along(5 * K, 3 * K);
         const ua = -0.12 + P.lean;
         const elbow = { x: S.x + Math.sin(ua) * D.upper, y: S.y + Math.cos(ua) * D.upper };
         armData.push({ S, elbow, wrist: pocketP, hand: null, pocket: true });
@@ -452,7 +569,7 @@
       const ua = A.u + P.lean, fa = A.u + A.f + P.lean;
       const elbow = { x: S.x + Math.sin(ua) * D.upper, y: S.y + Math.cos(ua) * D.upper };
       const wrist = { x: elbow.x + Math.sin(fa) * D.fore, y: elbow.y + Math.cos(fa) * D.fore };
-      const hand = { x: wrist.x + Math.sin(fa) * 1.6, y: wrist.y + Math.cos(fa) * 1.6 };
+      const hand = { x: wrist.x + Math.sin(fa) * 1.6 * K, y: wrist.y + Math.cos(fa) * 1.6 * K };
       armData.push({ S, elbow, wrist, hand });
     }
 
@@ -468,7 +585,7 @@
         const cx = a.wrist.x - (a.wrist.x - a.elbow.x) * 0.15, cy = a.wrist.y - (a.wrist.y - a.elbow.y) * 0.15;
         capsule(B, cx, cy, a.wrist.x, a.wrist.y, r - 0.2, r - 0.3, back ? tones(pal.shirt, 0.35) : tones(pal.shirt, 0.15), true);
       }
-      if (a.hand) ellipse(B, a.hand.x, a.hand.y, 1.9, 1.9, back ? skinB : skinT, true);
+      if (a.hand) ellipse(B, a.hand.x, a.hand.y, 1.9 * K, 1.9 * K, back ? skinB : skinT, true);
     };
     const drawLeg = (L, back) => {
       const T = back ? pantB : pantT;
@@ -482,8 +599,8 @@
     const shoe = (A, ang, T) => {
       // sola alinhada ao ângulo do pé (positivo = ponta para baixo)
       const c = Math.cos(ang), s = Math.sin(ang);
-      const k = o.kid ? 0.75 : 1;
-      const pt = (a, u) => [A.x + (a * c + u * s) * k, A.y + 2.5 + (a * s - u * c) * k];
+      const k = (o.kid ? 0.75 : 1) * K;
+      const pt = (a, u) => [A.x + (a * c + u * s) * k, A.y + 2.5 * K + (a * s - u * c) * k];
       const pts = [pt(-3, 0), pt(7, 0), pt(7.8, 1.6), pt(6, 3.2), pt(2.5, 4.2), pt(-2.5, 4.4), pt(-3.4, 2.8)];
       poly(B, pts, T, (x, y, u, v) => (v > 0.78 ? 1 : v < 0.25 && u > 0.35 ? 3 : 2));
       // cadarço
@@ -491,16 +608,17 @@
     };
 
     // --- ordem: cabelo de trás, braço de trás, perna de trás, perna da frente, tronco, cabeça, braço da frente ---
-    const headX = Math.round(neckTop.x - 6 + (style === 'helmet' ? 0 : 0));
-    const headY = Math.round(neckTop.y - 13 + P.headDY);
-    if (style === 'long') stamp(B, HAIR.long.slice(9), headX - 3, headY + 3, { h: hairT[1], H: hairT[2], k: hairT[0] });
+    const HU = K / 1.5;
+    const headX = Math.round(neckTop.x - 10 * HU);
+    const headY = Math.round(neckTop.y - 19 * HU + P.headDY);
+    if (style === 'long') drawHead(B, o, P, pal, headX, headY, skinT, hairT, style, true);
     drawArm(armData[0], true);
     drawLeg(legData[0], true);
     drawLeg(legData[1], false);
 
     // tronco
     const tw = o.kid ? 0.75 : 1;
-    const TP = (a, s) => { const q = along(a * (D.torso / 20), s * tw); return [q.x, q.y]; };
+    const TP = (a, s) => { const q = along(a * (D.torso / 20), s * tw * K); return [q.x, q.y]; };
     const torsoPts = o.hoodie
       ? [TP(-1.5, -7.5), TP(3, -8), TP(10, -8), TP(16, -7.2), TP(19.5, -5), TP(20.5, 0), TP(20, 4), TP(18.5, 7.5), TP(14, 9), TP(8, 8.6), TP(2, 8.4), TP(-1.5, 8.2)]
       : [TP(-1, -6.5), TP(4, -6.8), TP(11, -6.6), TP(17, -6), TP(19.5, -4.2), TP(20.2, 0), TP(19.8, 4), TP(18, 6.8), TP(13, 7.8), TP(7, 7), TP(1, 6.8), TP(-1, 6.6)];
@@ -550,63 +668,37 @@
       // gola em V
       const n1 = TP(19.8, 0.5), n2 = TP(17, 2.5), n3 = TP(19.8, 4.2);
       poly(B, [n1, n2, n3], skinT, () => 1);
-      if (o.jacket) { const j1 = TP(19, 3), j2 = TP(0.5, 3.4); capsule(B, j1[0], j1[1], j2[0], j2[1], 0.6, 0.6, tones(pal.shirt, 0.5), false); B.set(Math.round(TP(12, 4.5)[0]), Math.round(TP(12, 4.5)[1]), c32('#d9d9d9')); B.set(Math.round(TP(6, 4.6)[0]), Math.round(TP(6, 4.6)[1]), c32('#d9d9d9')); }
+      if (o.inner) {
+        // jaqueta aberta: camiseta aparecendo na frente e lapelas
+        poly(B, [TP(19.6, 2.2), TP(19.6, 6.4), TP(-0.5, 6.6), TP(-0.5, 3.6), TP(10, 3.2)], tones(o.inner), (x, y, u) => (u < 0.18 ? 1 : 2));
+        const l1 = TP(19.5, 2), l2 = TP(9, 3), l3 = TP(-0.5, 3.4);
+        capsule(B, l1[0], l1[1], l2[0], l2[1], 0.6, 0.6, tones(pal.shirt, 0.45), false); capsule(B, l2[0], l2[1], l3[0], l3[1], 0.6, 0.6, tones(pal.shirt, 0.45), false);
+      }
+      if (o.jacket && !o.inner) { const j1 = TP(19, 3), j2 = TP(0.5, 3.4); capsule(B, j1[0], j1[1], j2[0], j2[1], 0.6, 0.6, tones(pal.shirt, 0.5), false); B.set(Math.round(TP(12, 4.5)[0]), Math.round(TP(12, 4.5)[1]), c32('#d9d9d9')); B.set(Math.round(TP(6, 4.6)[0]), Math.round(TP(6, 4.6)[1]), c32('#d9d9d9')); }
       if (o.stripe) poly(B, [TP(11, -7), TP(13.5, -7), TP(13.5, 7.5), TP(11, 7.5)], tones(o.stripe), (x, y, u) => (u < 0.25 ? 1 : 2));
       if (o.apron) poly(B, [TP(-1, 0), TP(17, 0.5), TP(17, 7.2), TP(-1, 7.6)], tones('#f3efe6'), (x, y, u, v) => (u < 0.18 ? 1 : v < 0.06 ? 1 : 2));
       if (!o.kid && !o.dress) { const b1 = TP(0.6, -6.5), b2 = TP(0.6, 6.6); capsule(B, b1[0], b1[1], b2[0], b2[1], 0.6, 0.6, tones(pal.belt || dark(pal.pants, 0.4)), false); }
     }
 
     // pescoço e cabeça
-    const nb = along(D.torso - 1, 1);
-    capsule(B, nb.x, nb.y, neckTop.x, neckTop.y + 1, 2, 2, skinB, false);
-    const fp = { s: skinT[2], d: skinT[1], D: skinT[0], l: skinT[3], n: skinT[1] };
-    stamp(B, FACE, headX, headY, fp);
-    // olhos (3/4: o de trás perto da orelha, o da frente perto do nariz)
-    const eyeD = c32(pal.eye || '#20161e'), white = c32('#f4f1ea'), brow = hairT[0];
-    const ey = headY + 6;
-    if (P.eyes === 'closed') { B.set(headX + 6, ey + 1, skinT[0]); B.set(headX + 7, ey + 1, skinT[0]); B.set(headX + 10, ey + 1, skinT[0]); B.set(headX + 11, ey + 1, skinT[0]); }
-    else if (P.eyes === 'dizzy') { for (const ex of [6, 10]) { B.set(headX + ex, ey, eyeD); B.set(headX + ex + 1, ey + 1, eyeD); B.set(headX + ex + 1, ey, eyeD); B.set(headX + ex, ey + 1, eyeD); } }
-    else {
-      // pálpebra, branco, íris de 2 px e brilho
-      const iris = c32(mix(pal.eye || '#20161e', '#6b4a2a', 0.35));
-      for (const ex of [6, 10]) {
-        B.set(headX + ex, ey, eyeD); B.set(headX + ex + 1, ey, eyeD);
-        B.set(headX + ex, ey + 1, white); B.set(headX + ex + 1, ey + 1, iris);
-        B.set(headX + ex + 1, ey + 2, eyeD); B.set(headX + ex, ey + 2, skinT[1]);
-      }
-      B.set(headX + 12, ey, eyeD);   // canto do olho da frente
-    }
-    if (style !== 'helmet') { B.set(headX + 6, ey - 1, brow); B.set(headX + 7, ey - 1, brow); B.set(headX + 10, ey - 1, brow); B.set(headX + 11, ey - 1, brow); }
-    B.set(headX + 9, headY + 10, skinT[1]); B.set(headX + 10, headY + 10, skinT[0]);    // boca
-    B.set(headX + 11, headY + 8, c32(mix(pal.skin, '#e2706a', 0.3)));                     // bochecha
-    if (o.beard) { const bt = tones(o.beard); poly(B, [[headX + 3, headY + 7], [headX + 13, headY + 8], [headX + 12, headY + 12], [headX + 9, headY + 13], [headX + 4, headY + 11]], bt, (x, y, u) => (u < 0.2 ? 1 : 2)); }
-    if (o.glasses) { const gc = c32('#1c1e26'); for (let x = 5; x <= 13; x++) B.set(headX + x, ey - 1, gc); for (const gx of [5, 8, 9, 12]) { B.set(headX + gx, ey, gc); B.set(headX + gx, ey + 1, gc); } }
-    // cabelo / chapéu
-    const hp = { h: hairT[2], H: hairT[3], k: hairT[1] };
-    if (style === 'helmet') {
-      const hc = tones(o.helmet || '#c0392b');
-      ellipse(B, headX + 6.5, headY + 4, 9, 8.5, hc, false);
-      poly(B, [[headX + 9, headY + 4], [headX + 15, headY + 4], [headX + 15, headY + 9], [headX + 9, headY + 9]], tones('#2a2f3a'), (x, y, u, v) => (v < 0.3 && u > 0.2 ? 3 : 1));
-      poly(B, [[headX - 2, headY + 9], [headX + 4, headY + 9], [headX + 4, headY + 11], [headX - 2, headY + 11]], hc, () => 1);
-    } else if (style === 'cap') {
-      const cc = tones(o.cap || '#f1efe8');
-      stamp(B, HAIR.short.slice(6), headX - 3, headY, hp);
-      ellipse(B, headX + 6, headY + 1.5, 8, 4.5, cc, false);
-      poly(B, [[headX + 10, headY + 2], [headX + 18, headY + 3], [headX + 18, headY + 4.5], [headX + 10, headY + 4.5]], cc, () => 1);
-      for (let x = -2; x <= 13; x++) if (B.get(headX + x, headY + 5)) B.set(headX + x, headY + 4, cc[1]);
-    } else {
-      stamp(B, HAIR[style] || HAIR.short, headX - 3, headY - 6, hp, P.hairFlow);
-    }
+    const nb = along(D.torso - K, K);
+    capsule(B, nb.x, nb.y, neckTop.x, neckTop.y + K, 2 * K, 2 * K, skinB, false);
+    drawHead(B, o, P, pal, headX, headY, skinT, hairT, style, false);
 
-    // braço da frente por último
+    // braço da frente por último (no bolso, o bolso fica por cima da mão)
     drawArm(armData[1], false);
+    if (armData[1] && armData[1].pocket && o.hoodie) {
+      const TP2 = (a, s2) => { const q = along(a * (D.torso / 20), s2 * K); return [q.x, q.y]; };
+      poly(B, [TP2(4, 0.5), TP2(9.5, 1.5), TP2(9.5, 7.6), TP2(4, 7.8)], topT, (x, y, u2, v) => (v < 0.12 ? 0 : u2 < 0.1 || u2 > 0.92 ? 0 : v > 0.9 ? 1 : 2 - (u2 < 0.35 ? 1 : 0)));
+      const w1 = TP2(9.2, 2.2); B.set(Math.round(w1[0]), Math.round(w1[1]), topT[3]);
+    }
   }
 
   function keyOf(o, kind, f, P, flip) {
     const pal = o.pal || G.PAL_V;
     return [kind, f, P.eyes, flip ? 1 : 0, o.carrying ? 1 : 0, o.handOnBag ? 1 : 0, o.aim ? 1 : 0, pal.skin, pal.hair, pal.shirt, pal.pants, pal.shoe, pal.belt, pal.eye,
       o.hairStyle || '', o.dress || '', o.apron ? 1 : 0, o.shirtless ? 1 : 0, o.kid ? 1 : 0, o.beard || '', o.glasses ? 1 : 0,
-      o.helmet || '', o.cap || '', o.jacket ? 1 : 0, o.stripe || '', o.hoodie ? 1 : 0, o.longSleeve ? 1 : 0].join('|');
+      o.helmet || '', o.cap || '', o.jacket ? 1 : 0, o.stripe || '', o.hoodie ? 1 : 0, o.longSleeve ? 1 : 0, o.inner || ''].join('|');
   }
 
   /** Quadro (canvas) com contorno; virado para a esquerda quando facing < 0. */
@@ -629,7 +721,7 @@
   /** Sombra suave no chão. */
   function shadow(c, x, y, w) {
     c.save(); c.globalAlpha = 0.2; c.fillStyle = '#05030a';
-    c.fillRect(x - w / 2 + 3, y - 1, w - 6, 3); c.fillRect(x - w / 2, y, w, 1);
+    c.fillRect(x - w / 2 + 4, y - 2, w - 8, 4); c.fillRect(x - w / 2, y - 1, w, 2);
     c.restore();
   }
 
@@ -645,7 +737,7 @@
     const S = G.HI || 2;
     G.hi(c, () => {
       const X = Math.round(cx * S), Y = Math.round(feetY * S) + (o.landT > 0 ? 1 : 0);
-      if (o.shadow !== false && (st === 'idle' || st === 'walk' || st === 'sweep' || st === 'stun' || st === 'rise')) shadow(c, X, Y, o.kid ? 16 : 24);
+      if (o.shadow !== false && (st === 'idle' || st === 'walk' || st === 'sweep' || st === 'stun' || st === 'rise')) shadow(c, X, Y, Math.round((o.kid ? 16 : 24) * K));
       const ox = X - (o.facing < 0 ? BW - 1 - AX : AX), oy = Y - AY;
       c.drawImage(cv, ox, oy);
       if (o.aim) aimArm(c, X, Y, o, P);
@@ -662,34 +754,34 @@
     const f = o.facing < 0 ? -1 : 1;
     const D = rigDims(o);
     const S = G.HI || 2;
-    const sx = X + f * 3, sy = Y + Math.round(D.hipY - D.torso + 3 + P.chest);
+    const sx = X + Math.round(f * 3 * K), sy = Y + Math.round(D.hipY - D.torso + 3 * K + P.chest);
     const ang = Math.atan2(o.aim.y * S - sy, o.aim.x * S - sx);
     const N = 48, bucket = ((Math.round(ang / (Math.PI * 2) * N) % N) + N) % N;
     const pal = o.pal || G.PAL_V;
     const key = bucket + '|' + pal.shirt + pal.skin + (o.hoodie ? 1 : 0);
     let cv = armCache.get(key);
     if (!cv) {
-      const B = new Buf(56, 56), a = bucket / N * Math.PI * 2;
-      const dx = Math.cos(a), dy = Math.sin(a), cx0 = 28, cy0 = 28;
+      const AB = Math.round(56 * K), B = new Buf(AB, AB), a = bucket / N * Math.PI * 2;
+      const dx = Math.cos(a), dy = Math.sin(a), cx0 = AB / 2, cy0 = AB / 2;
       const L = D.upper + D.fore;
       const sl = tones(pal.shirt);
       capsule(B, cx0, cy0, cx0 + dx * (L - 2), cy0 + dy * (L - 2), D.armR + 0.3, D.armR - 0.3, o.hoodie || o.jacket ? sl : tones(pal.skin), true);
-      capsule(B, cx0, cy0, cx0 + dx * 6, cy0 + dy * 6, D.armR + 0.6, D.armR + 0.4, sl, true);
-      if (o.hoodie) capsule(B, cx0 + dx * (L - 4.5), cy0 + dy * (L - 4.5), cx0 + dx * (L - 2), cy0 + dy * (L - 2), D.armR - 0.1, D.armR - 0.2, tones(pal.shirt, 0.15), true);
+      capsule(B, cx0, cy0, cx0 + dx * 6 * K, cy0 + dy * 6 * K, D.armR + 0.6 * K, D.armR + 0.4 * K, sl, true);
+      if (o.hoodie) capsule(B, cx0 + dx * (L - 4.5 * K), cy0 + dy * (L - 4.5 * K), cx0 + dx * (L - 2 * K), cy0 + dy * (L - 2 * K), D.armR - 0.1, D.armR - 0.2, tones(pal.shirt, 0.15), true);
       // mão aberta (dedos esticados)
-      ellipse(B, cx0 + dx * L, cy0 + dy * L, 2.2, 2.2, tones(pal.skin), true);
-      capsule(B, cx0 + dx * L, cy0 + dy * L, cx0 + dx * (L + 3.2), cy0 + dy * (L + 3.2), 1, 0.8, tones(pal.skin), false);
+      ellipse(B, cx0 + dx * L, cy0 + dy * L, 2.2 * K, 2.2 * K, tones(pal.skin), true);
+      capsule(B, cx0 + dx * L, cy0 + dy * L, cx0 + dx * (L + 3.2 * K), cy0 + dy * (L + 3.2 * K), 1 * K, 0.8 * K, tones(pal.skin), false);
       outline(B);
       cv = toCanvas(B, false);
       armCache.set(key, cv);
     }
-    c.drawImage(cv, sx - 28, sy - 28);
+    c.drawImage(cv, sx - cv.width / 2, sy - cv.height / 2);
     if (o.glow > 0) {
-      const L = D.upper + D.fore + 2, hx = sx + Math.cos(ang) * L, hy = sy + Math.sin(ang) * L;
+      const L = D.upper + D.fore + 2 * K, hx = sx + Math.cos(ang) * L, hy = sy + Math.sin(ang) * L;
       c.save(); c.globalCompositeOperation = 'lighter';
-      const g = c.createRadialGradient(hx, hy, 0, hx, hy, 9);
+      const g = c.createRadialGradient(hx, hy, 0, hx, hy, 9 * K);
       g.addColorStop(0, hexA(o.glowColor || '#9fd8ff', 0.75 * o.glow)); g.addColorStop(1, hexA(o.glowColor || '#9fd8ff', 0));
-      c.fillStyle = g; c.fillRect(hx - 9, hy - 9, 18, 18); c.restore();
+      c.fillStyle = g; c.fillRect(hx - 9 * K, hy - 9 * K, 18 * K, 18 * K); c.restore();
     }
   }
   function hexA(hex, a) { const [r, g, b] = rgb(hex); return 'rgba(' + r + ',' + g + ',' + b + ',' + a.toFixed(3) + ')'; }
@@ -704,12 +796,12 @@
       const X = Math.round(cx * S), Y = Math.round(feetY * S);
       c.save(); c.translate(X, Y);
       // cabeça para o lado de f (esquerda quando f > 0), costas no chão
-      if (f > 0) { c.rotate(-Math.PI / 2); c.drawImage(cv, -(AX - 12), -(AY - 34)); }
-      else { c.rotate(Math.PI / 2); c.drawImage(cv, -(BW - 1 - AX + 14), -(AY - 34)); }
+      if (f > 0) { c.rotate(-Math.PI / 2); c.drawImage(cv, -(AX - 12 * K), -(AY - 34 * K)); }
+      else { c.rotate(Math.PI / 2); c.drawImage(cv, -(BW - 1 - AX + 14 * K), -(AY - 34 * K)); }
       c.restore();
       if (o.state === 'lie') { // bolsa de gelo na testa
-        const hx = X + f * -26 - 6;
-        c.fillStyle = '#cfeaff'; c.fillRect(hx, Y - 26, 12, 6); c.fillStyle = '#ffffff'; c.fillRect(hx + 1, Y - 26, 10, 2);
+        const hx = X + Math.round(f * -26 * K) - 9;
+        c.fillStyle = '#cfeaff'; c.fillRect(hx, Y - Math.round(26 * K), 18, 9); c.fillStyle = '#ffffff'; c.fillRect(hx + 2, Y - Math.round(26 * K), 14, 3);
       }
     });
   }

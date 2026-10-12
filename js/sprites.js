@@ -129,6 +129,7 @@
    * Animais e veículos
    * ------------------------------------------------------------------ */
   function dog(c, x, y, dir, anim) {
+    if (G.ArtSprites && G.ArtSprites.dog) return G.ArtSprites.dog(c, x, y, dir, anim);
     // caramelo vira-lata: 14×10 com contorno, 4 quadros de trote
     const f = dir >= 0 ? 1 : -1;
     const fr = Math.floor(anim / 1.6) % 4;
@@ -148,6 +149,7 @@
     else { c.save(); c.translate(Math.round(x) + 14, Math.round(y) - 3); c.scale(-1, 1); c.drawImage(cv, 0, 0); c.restore(); }
   }
   function moto(c, x, y, facing, anim, hop) {
+    if (G.ArtSprites && G.ArtSprites.moto) return G.ArtSprites.moto(c, x, y, facing, anim, hop);
     // moto de entrega com o entregador sentado no banco (caixa 24×20)
     const f = facing >= 0 ? 1 : -1;
     const lift = hop ? Math.round(hop * 3) : 0;
@@ -179,6 +181,7 @@
     c.restore();
   }
   function pigeon(c, x, y, fly, t, dir) {
+    if (G.ArtSprites && G.ArtSprites.pigeon) return G.ArtSprites.pigeon(c, x, y, fly, t, dir);
     const f = dir >= 0 ? 1 : -1;
     const px = (dx, dy, w, h, col) => R(c, f > 0 ? x + dx : x + (5 - dx - w), y + dy, w, h, col);
     if (fly > 0) {
@@ -196,10 +199,18 @@
   function prop(c, p, sx, sy, env) {
     const T = p.type;
     if (p.broken && !p.T.structure) {
-      for (const s of p.shards) R(c, s.x - env.cam.x, s.y - env.cam.y, 2, 1, s.c);
+      G.hi(c, (S) => { for (const s of p.shards) R(c, Math.round((s.x - env.cam.x) * S), Math.round((s.y - env.cam.y) * S), 3, 2, s.c); });
       return;
     }
     const rot = Math.abs(p.angle) > 0.05 && !p.T.structure;
+    const fineP = G.ArtProps && G.ArtProps[T];
+    if (fineP) {
+      G.hi(c, (S) => {
+        if (rot) { c.translate(Math.round((sx + p.w / 2) * S), Math.round((sy + p.h / 2) * S)); c.rotate(p.angle); fineP(c, p, Math.round(-p.w * S / 2), Math.round(-p.h * S / 2), env, S); }
+        else fineP(c, p, Math.round(sx * S), Math.round(sy * S), env, S);
+      });
+      return;
+    }
     if (rot) { c.save(); c.translate(Math.round(sx + p.w / 2), Math.round(sy + p.h / 2)); c.rotate(p.angle); sx = -p.w / 2; sy = -p.h / 2; }
     const x = sx, y = sy;
     switch (T) {
@@ -246,6 +257,7 @@
   }
 
   function bench(c, x, y, p) {
+    if (G.ArtSprites && G.ArtSprites.bench) return G.ArtSprites.bench(c, x, y, p);
     const intact = !p.broken;
     const k = p.restoring && p.restoring.phase === 'assemble' ? U.easeInOut(Math.min(1, p.restoring.t)) : (intact ? 1 : 0);
     // pés de ferro (sempre no lugar)
@@ -264,6 +276,7 @@
   }
 
   function lampPost(c, x, y, p, env) {
+    if (G.ArtSprites && G.ArtSprites.lampPost) return G.ArtSprites.lampPost(c, x, y, p, env);
     const intact = !p.broken;
     const k = p.restoring && p.restoring.phase === 'assemble' ? U.easeInOut(Math.min(1, p.restoring.t)) : (intact ? 1 : 0);
     // metade de baixo fixa
@@ -283,6 +296,8 @@
    * Móveis e cenário (decor)
    * ------------------------------------------------------------------ */
   function decor(c, d, x, y, env) {
+    const fine = G.ArtDecor && G.ArtDecor[d.type];
+    if (fine) { G.hi(c, (S) => fine(c, d, Math.round(x * S), Math.round(y * S), env, S)); return; }
     const w = d.w, h = d.h;
     switch (d.type) {
       case 'geladeira': R(c, x, y, w, h, '#dfe3e6'); R(c, x, y, w, 1, '#f4f6f7'); R(c, x, y + 11, w, 1, '#a9b0b5'); R(c, x + w - 3, y + 4, 1, 5, '#9aa1a6'); R(c, x + w - 3, y + 15, 1, 8, '#9aa1a6'); R(c, x + w - 1, y, 1, h, '#b8bfc4'); R(c, x + 2, y + 14, 4, 3, '#e8c547'); break;

@@ -37,7 +37,7 @@ const ok = (cond, msg) => { if (cond) console.log('  ok  ' + msg); else { failur
     }
   };
   const waitFor = async (fn, ms, arg) => { const t0 = Date.now(); while (Date.now() - t0 < (ms || 5000)) { if (await ev(fn, arg)) return true; await wait(80); } return false; };
-  const toClient = (x, y) => ev(([x, y]) => { const g = VG.game, r = g.renderer, c = document.getElementById('game').getBoundingClientRect(); return { x: c.left + (x - r.cam.x) * c.width / 480, y: c.top + (y - r.cam.y) * c.height / 270 }; }, [x, y]);
+  const toClient = (x, y) => ev(([x, y]) => { const g = VG.game, r = g.renderer, c = document.getElementById('game').getBoundingClientRect(); return { x: c.left + (x - r.cam.x) * c.width / VG.VIEW_W, y: c.top + (y - r.cam.y) * c.height / VG.VIEW_H }; }, [x, y]);
   const place = (x, y) => ev(([x, y]) => { const p = VG.game.player; p.clearPose(); p.x = x; p.y = y; p.vx = 0; p.vy = 0; VG.game.renderer.snapCamera(); }, [x, y]);
   const pressE = async () => { await page.keyboard.press('KeyE'); await wait(120); };
   const selectPower = async (n) => { await page.keyboard.press('Digit' + n); await wait(60); };
