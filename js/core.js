@@ -13,6 +13,9 @@
   G.TILE = 16;          // 1 bloco = 16 px ≈ 1 metro
   G.VIEW_W = 480;       // resolução interna (pixel art)
   G.VIEW_H = 270;
+  G.HI = 2;             // personagens, partículas e efeitos são desenhados com o dobro de pixels
+  /** Desenha em fn com 1 unidade = 1 pixel fino (coordenadas do mundo × G.HI). */
+  G.hi = function (c, fn) { c.save(); c.scale(1 / G.HI, 1 / G.HI); try { fn(G.HI); } finally { c.restore(); } };
   G.STEP = 1 / 60;      // passo fixo da simulação
   G.CLOCK_RATE = 1;     // minutos de jogo por segundo real
 

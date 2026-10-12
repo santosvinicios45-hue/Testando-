@@ -125,10 +125,18 @@ segredo do telhado (que pode terminar devolvendo a chave ao porteiro, Seu Valdir
 - Objetos com física: empilhar, empurrar, arremessar, quebrar (copo, garrafa) e restaurar
   por rebobinamento do histórico de posições.
 - Os seis poderes, com a Linha, emoções e consequências.
-- Personagens em pixel art com proporções realistas (vista 3/4): V de moletom azul com capuz,
-  cordões e bolso canguru, jeans e tênis branco, cabelo preto espetado e mãos no bolso quando
-  parado; sombreamento, contorno automático, sombra no chão, andar em 6 quadros, corrida, respiração, piscar, pulo, queda, voo, sentar,
-  varrer, carregar, tontura e deitado; moto, cachorro e carros redesenhados.
+- Personagens em pixel art de alta resolução (o dobro de pixels do mundo, ~64 px de altura),
+  montados sobre um esqueleto: as pernas usam cinemática inversa (ficam presas ao quadril e os
+  pés plantados no chão durante a passada), braços com cotovelo, ciclo de andar em 12 quadros e
+  de corrida em 10, respiração, piscar, pulo, queda, voo, sentar, varrer, carregar, tontura,
+  deitado e braço que aponta para o cursor. V usa moletom azul com capuz, cordões e bolso
+  canguru, jeans e tênis branco, e fica com as mãos no bolso quando parado.
+- Efeitos dos poderes e partículas também em alta resolução: fio de energia da Levitação,
+  cantoneiras animadas nos alvos, mostrador de relógio na Restauração, coluna de luz no
+  Teleporte, borda tremulando na Percepção, faíscas e estrelinhas.
+- Cenário vivo: árvore e arbustos com folhagem detalhada balançando, folhas caindo, grama,
+  borboletas, mariposas nos postes à noite, vapor na padaria, poeira na luz da sala e um gato de
+  rua no terreno baldio (conteúdo original).
 - Pessoas que se assustam correm alguns passos, se encolhem olhando para V e depois voltam ao
   lugar; a mesma coisa repetida (voar perto de novo) não reinicia o susto a cada instante.
 - Ciclo de dia e noite com céu, sol, lua, estrelas, nuvens fofas, cidade em cinco camadas de
@@ -179,7 +187,8 @@ js/inventory.js   bolsos e catálogo de itens
 js/story.js       diálogos, passos da campanha, sequência "A Linha", missões secundárias
 js/interact.js    objetos interativos fixos e portas
 js/save.js        salvar, carregar, validar e configurações
-js/characters.js  personagens: quadros com contorno e sombreamento, em cache
+js/characters.js  personagens em alta resolução: esqueleto, cinemática inversa, rasterização própria
+js/ambient.js     vida do cenário (folhagem, insetos, gato, vapor, poeira)
 js/sprites.js     pixel art procedural (objetos, móveis, veículos, ícones)
 js/render.js      câmera, céu, paralaxe, blocos, luz e efeitos
 js/ui.js          interface em DOM

@@ -169,12 +169,12 @@
       P(25, wy - 10, 3, 3, '#d83a3f'); P(27, wy - 9, 2, 2, '#ffe08a'); // farol
       P(4, wy - 5, 6, 2, '#6e737a'); P(2, wy - 5, 2, 1, '#9aa0a8');    // escapamento
     });
-    const rider = G.Characters.frame({ state: 'sit', facing: 1, t: 0, hairStyle: 'helmet', carrying: true,
-      pal: { skin: '#8d5a3b', hair: '#111', shirt: '#2c3e50', pants: '#34495e', shoe: '#222', belt: '#222' } });
     c.save();
     const bx = Math.round(x) + (f > 0 ? -4 : 28), by = Math.round(y) - 20 + 2 - lift;
     c.translate(bx, by); if (f < 0) c.scale(-1, 1);
-    c.drawImage(rider, 11 - G.Characters.X0, 24 - G.Characters.FY);
+    // entregador sentado no banco, mãos no guidão
+    G.Characters.draw(c, 12, 23, { state: 'sit', facing: 1, t: 0, hairStyle: 'helmet', carrying: true, jacket: true, shadow: false,
+      pal: { skin: '#8d5a3b', hair: '#111', shirt: '#2c3e50', pants: '#34495e', shoe: '#222', belt: '#222' } });
     c.drawImage(cv, 0, 0);
     c.restore();
   }
@@ -362,12 +362,14 @@
       case 'balcao_portaria': R(c, x, y, w, 3, '#d9d4c7'); R(c, x, y + 3, w, h - 3, '#5d4a3a'); R(c, x + 3, y + 5, w - 6, h - 8, '#6e5845'); R(c, x + 4, y - 7, 9, 7, '#1c232c'); R(c, x + 5, y - 6, 7, 4, '#4a7eb5'); R(c, x + 22, y - 2, 8, 2, '#e9dfc9'); break;
       case 'ponto': R(c, x, y, w, 3, '#5b6b75'); R(c, x + 2, y + 3, 2, h - 3, '#5b6b75'); R(c, x + w - 4, y + 3, 2, h - 3, '#5b6b75'); R(c, x + 6, y + 6, 18, 16, '#f0f0e8'); R(c, x + 7, y + 7, 16, 14, '#9ec5e8'); R(c, x + 6, y + h - 10, w - 10, 2, '#7a8a94'); break;
       case 'barreira': for (let i = 0; i < w; i += 6) R(c, x + i, y + 2, 4, 4, (i / 6) % 2 ? '#f5f5f5' : '#e74c3c'); R(c, x + 2, y + 6, 2, h - 6, '#555'); R(c, x + w - 4, y + 6, 2, h - 6, '#555'); break;
-      case 'arvore': R(c, x + w / 2 - 3, y + 34, 6, h - 34, '#6b4a2f'); R(c, x + w / 2 - 1, y + 34, 2, h - 34, '#7d5a3a');
+      case 'arvore': if (G.AmbientArt) { G.hi(c, (S) => G.AmbientArt.tree(c, d, x, y, env.time, S)); break; }
+        R(c, x + w / 2 - 3, y + 34, 6, h - 34, '#6b4a2f'); R(c, x + w / 2 - 1, y + 34, 2, h - 34, '#7d5a3a');
         for (const [a, b, r, col] of [[0.5, 0.25, 22, '#2f7d3a'], [0.25, 0.35, 15, '#2a6e33'], [0.75, 0.35, 16, '#2a6e33'], [0.45, 0.15, 14, '#3a9a47'], [0.62, 0.22, 10, '#46ad54']]) {
           c.fillStyle = col; c.beginPath(); c.arc(Math.round(x + w * a), Math.round(y + h * b), r, 0, Math.PI * 2); c.fill();
         }
         break;
-      case 'arbusto': c.fillStyle = '#2f7d3a'; c.beginPath(); c.ellipse(Math.round(x + w / 2), Math.round(y + h), w / 2, h, 0, Math.PI, 0); c.fill(); R(c, x + w / 2 - 2, y + 2, 3, 2, '#46ad54'); break;
+      case 'arbusto': if (G.AmbientArt) { G.hi(c, (S) => G.AmbientArt.bush(c, d, x, y, env.time, S)); break; }
+        c.fillStyle = '#2f7d3a'; c.beginPath(); c.ellipse(Math.round(x + w / 2), Math.round(y + h), w / 2, h, 0, Math.PI, 0); c.fill(); R(c, x + w / 2 - 2, y + 2, 3, 2, '#46ad54'); break;
       case 'banco_ok': bench(c, x, y, { broken: false }); break;
       case 'placa': R(c, x + 8, y + 8, 2, h - 8, '#555'); R(c, x, y, w, 9, '#2e7d4a'); c.fillStyle = '#fff'; c.font = '5px monospace'; c.textAlign = 'center'; c.fillText(d.text || '', x + w / 2, y + 6); break;
       case 'toldo': {

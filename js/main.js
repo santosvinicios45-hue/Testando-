@@ -65,6 +65,7 @@
       this.pigeons = spec.pigeons.map((p) => new G.Pigeon(p.x, p.y));
       this.stairs = spec.stairs || [];
       this.particles = new G.Particles();
+      this.ambient = G.Ambient ? new G.Ambient(this) : null;
       this.renderer.initWorld(this.world);
       this.interactables = G.buildInteractables(this, spec);
       this.sequence = null;
@@ -258,6 +259,7 @@
         this.player.x += 10 * dt; if (this.player.x > TS * 130) this.player.x = TS * 40;
         for (const n of this.npcs) n.update(dt, this);
         for (const pg of this.pigeons) pg.update(dt, this);
+        if (this.ambient) this.ambient.update(dt);
         this.particles.update(dt);
         this.renderer.update(dt);
         return;
@@ -310,6 +312,7 @@
       if (this.props.some((p) => p.removed && p.dynamic)) this.props = this.props.filter((p) => !(p.removed && p.dynamic));
       for (const n of this.npcs) n.update(dt, this);
       for (const pg of this.pigeons) pg.update(dt, this);
+      if (this.ambient) this.ambient.update(dt);
       this.particles.update(dt);
 
       // área atual
