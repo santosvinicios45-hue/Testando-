@@ -121,7 +121,7 @@
     let cx = Math.round(x);
     for (const ch of s) {
       const g = glyph(ch);
-      g.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '1') { if (shadow) p.rect(cx + i * k + k, y + j * k + k, k, k, shadow); p.rect(cx + i * k, y + j * k, k, k, col); } });
+      g.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '1') { if (shadow) { const o = Math.max(1, R(k / 3)); p.rect(cx + i * k + o, y + j * k + o, k, k, shadow); } p.rect(cx + i * k, y + j * k, k, k, col); } });
       cx += (g[0].length + 1) * k;
     }
   }
@@ -318,6 +318,7 @@
       for (let i = 0; i < 10; i++) p.rect(R(cx + H(i, 4, 1) * (W - cx - u(4))), R(H(i, 4, 2) * Hh), 2, 1, T.d);
       // boca: anel com volume
       p.ball(cx, cy, r, r, conc);
+      p.clusters(R(cx - r), 0, R(r * 2), Hh, T.d, 14, 2, 21).clusters(R(cx - r), 0, R(r * 2), Hh, T.l, 8, 2, 22);
       p.ellipse(cx, cy, r * 0.72, r * 0.72, T.o);
       // parede interna: fundo escuro, borda de baixo pegando luz
       for (let y = Math.floor(cy - r * 0.72); y <= cy + r * 0.72; y++) for (let x = Math.floor(cx - r * 0.72); x <= cx + r * 0.72; x++) {
@@ -329,7 +330,6 @@
         p.px(x, y, deep ? '#1f1d1c' : dv > 0.1 ? T.d : '#3c3a37');
       }
       // textura de concreto e trinca
-      p.clusters(R(cx - r), 0, R(r * 2), Hh, T.d, 14, 2, 21).clusters(R(cx - r), 0, R(r * 2), Hh, T.l, 8, 2, 22);
       p.line(R(cx + r * 0.5), R(cy - r * 0.9), R(cx + r * 0.7), R(cy - r * 0.55), T.d2).line(R(cx + r * 0.7), R(cy - r * 0.55), R(cx + r * 0.6), R(cy - r * 0.3), T.d2);
       // capim nascendo na base
       for (let i = 0; i < 6; i++) { const gx = R(cx + r * 0.6 + i * u(1.4)), gh = u(1.5 + H(i, 5, 1) * 2.5); p.rect(gx, Hh - gh, 1, gh, i % 2 ? '#4e8f3a' : '#6cb24c'); }
@@ -550,7 +550,7 @@
   const TUFTS = [
     [6, 31, 30, 22, 0], [52, 29, 30, 22, 0], [29, 11, 42, 26, 0], [30, 34, 50, 20, 0],
     [4, 36, 24, 17, 1], [54, 35, 24, 17, 1], [15, 21, 30, 22, 1], [44, 18, 30, 22, 1],
-    [27, 4, 32, 18, 1], [30, 40, 34, 14, 1], [31, 26, 28, 18, 1], [20, 10, 22, 14, 1],
+    [27, 4, 32, 18, 1], [31, 36, 28, 12, 1], [31, 26, 28, 18, 1], [20, 10, 22, 14, 1],
   ];
   A.arvore = function (c, d, X, Y, env, S) {
     const W = d.w * S, Hh = d.h * S, u = (n) => R(n * S), t = env.time;
@@ -588,7 +588,7 @@
 
   A.arbusto = function (c, d, X, Y, env, S) {
     const u = (n) => R(n * S);
-    const kind = H(R(d.x), 5, 1) > 0.5 ? 'fruta' : 'flor';
+    const kind = d.w >= 20 ? 'fruta' : 'flor'; // um com laranjinhas, outro florido
     const w = d.w * S + u(4), h = d.h * S + u(7);
     const b = blob('bush' + kind + w + 'x' + h, w, h, LEAF, 90 + w, u(2.6), (p, inside, lit) => {
       for (let i = 0; i < (kind === 'fruta' ? 9 : 16); i++) {

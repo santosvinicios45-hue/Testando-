@@ -69,21 +69,22 @@
     const base = M(DIRT, '#24161f', Math.min(0.42, depth * 0.075 + 0.04));
     const T = G.Pix.tones(base);
     // torrões: mancha escura com borda de luz em cima
-    for (let i = 0; i < 5; i++) {
+    const Dm = G.Pix.mix(T.b, T.d, 0.7);
+    for (let i = 0; i < 4; i++) {
       const x = Math.floor(h(10 + i) * 27), y = y0 + 2 + Math.floor(h(30 + i) * (28 - y0));
       const w = 3 + Math.floor(h(50 + i) * 3);
-      p.rect(x, y, w, 2, T.d); p.px(x + w - 1, y + 1, T.d2);
+      p.rect(x, y, w, 2, Dm); p.px(x + w - 1, y + 1, T.d);
       p.hline(x + 1, y - 1, w - 2, T.l);
     }
     // grãos claros
-    for (let i = 0; i < 2; i++) { const x = Math.floor(h(90 + i) * 30), y = y0 + 1 + Math.floor(h(100 + i) * (29 - y0)); p.hline(x, y, 2, T.l); }
+    { const x = Math.floor(h(90) * 30), y = y0 + 1 + Math.floor(h(100) * (29 - y0)); p.hline(x, y, 3, T.l); p.hline(x + 1, y + 1, 2, T.d); }
     // estrias horizontais (camadas)
     if (h(5) > 0.5) { const y = y0 + 4 + Math.floor(h(6) * Math.max(1, 24 - y0)); p.hline(Math.floor(h(7) * 12), y, 8 + Math.floor(h(8) * 12), T.d); }
     // pedrinhas cinzas (poucas e maiores)
-    const nPeb = Math.floor(h(110) * 2.4);
+    const nPeb = h(110) > 0.72 ? 1 : 0;
     for (let i = 0; i < nPeb; i++) {
       const x = 1 + Math.floor(h(120 + i) * 25), y = y0 + 2 + Math.floor(h(130 + i) * Math.max(1, 25 - y0));
-      pebble(p, x, y, 3 + Math.floor(h(140 + i) * 3), 2 + (h(150 + i) > 0.4 ? 1 : 0), ['#857b70', '#94897a', '#766d64'][i % 3]);
+      pebble(p, x, y, 4 + Math.floor(h(140 + i) * 3), 3, ['#857b70', '#94897a', '#766d64'][Math.floor(h(145) * 3)]);
     }
     // raiz fina perto da superfície
     if (depth <= 1 && h(160) > 0.8) {
@@ -108,25 +109,29 @@
     const depth = Math.max(0, k.ty - 42);
     const base = M('#666a70', '#2a2a36', Math.min(0.3, depth * 0.05));
     const T = G.Pix.tones(base);
-    p.rect(0, 0, S, S, T.d);
-    // blocos de rocha encaixados (bandas de luz e sombra)
-    const rocks = [[8, 8], [24, 7], [7, 23], [22, 23], [15, 15]];
-    for (let i = 0; i < rocks.length; i++) {
-      const rx = 5 + Math.floor(h(10 + i) * 4), ry = 4 + Math.floor(h(20 + i) * 3);
-      const cx = rocks[i][0] + Math.floor(h(30 + i) * 3) - 1, cy = rocks[i][1] + Math.floor(h(40 + i) * 3) - 1;
-      if (i === 4 && h(48) > 0.5) continue;
-      const col = M(base, h(50 + i) > 0.5 ? '#7a7464' : '#5c6478', 0.18 + h(60 + i) * 0.15);
+    p.rect(0, 0, S, S, T.b);
+    p.clusters(0, 0, S, S, T.d, 7, 3, k.tx * 23 + k.ty * 5);
+    // pedras angulosas encaixadas: sombra, borda de luz e corpo
+    const spots = [[9, 9], [24, 10], [9, 25], [24, 25]];
+    for (let i = 0; i < 4; i++) {
+      if (h(48 + i) > 0.8) continue;
+      const cx = spots[i][0] + Math.floor(h(30 + i) * 5) - 2, cy = spots[i][1] + Math.floor(h(40 + i) * 5) - 2;
+      const rx = 5 + h(10 + i) * 3, ry = 4 + h(20 + i) * 2.5;
+      const pts = [];
+      for (let v = 0; v < 6; v++) { const a = v / 6 * Math.PI * 2 + h(80 + i) , r = 0.75 + hx(k.tx * 4 + i, k.ty * 6 + v, 3) * 0.35; pts.push([cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r]); }
+      const col = M(base, h(50 + i) > 0.5 ? '#80786a' : '#5c6478', 0.15 + h(60 + i) * 0.2);
       const R = G.Pix.tones(col);
-      p.ellipse(cx + 1, cy + 1, rx, ry, R.d2);
-      p.ellipse(cx, cy, rx, ry, R.b);
-      p.ellipse(cx - 1, cy - 1, rx - 1, ry - 1, R.l);
-      p.ellipse(cx, cy, rx - 1.5, ry - 1.5, R.b);
-      p.hline(cx - Math.floor(rx / 2), cy - ry + 1, 2, R.h);
+      const sh = (dx, dy) => pts.map((q) => [q[0] + dx, q[1] + dy]);
+      p.poly(sh(1, 2), T.d2);
+      p.poly(pts, R.l);
+      p.poly(sh(1, 1), R.d);
+      p.poly(sh(0.5, 0.5).map((q) => [cx + (q[0] - cx) * 0.8, cy + (q[1] - cy) * 0.8]), R.b);
+      p.px(Math.round(cx - rx * 0.4), Math.round(cy - ry * 0.5), R.h);
     }
     // rachadura ocasional
-    if (h(70) > 0.7) {
-      let x = 4 + Math.floor(h(71) * 20), y = 2;
-      for (let s = 0; s < 7; s++) { p.vline(x, y, 3, T.o); p.vline(x + 1, y + 1, 2, T.l); x += h(72 + s) > 0.5 ? 1 : -1; y += 3; }
+    if (h(70) > 0.82) {
+      let x = 4 + Math.floor(h(71) * 20), y = 1;
+      for (let s = 0; s < 4; s++) { const nx = x + (h(72 + s) > 0.5 ? 2 : -2); p.line(x, y, nx, y + 3, T.o); x = nx; y += 3; }
     }
     // bolsões de terra na transição terra → pedra
     if (k.get(0, -1) === G.T.DIRT) {
@@ -676,7 +681,7 @@
       for (let i = 0; i < 4; i++) { const sx = 36 + Math.floor(hx(mod, i, 9) * 56); alpha(c, 0.25, () => m.vline(sx, 99, 4 + Math.floor(hx(mod, i, 10) * 10), '#8a6a4a')); }
     }
     // ar-condicionado no vão à direita
-    if (hx(mcol, ty - wy + 2, 9) > 0.5) {
+    if (hx(mcol * 5 + mrow, 77, 9) > 0.55) {
       const Ac = G.Pix.tones('#e3e5e2');
       m.rect(100, 72, 24, 16, Ac.b); m.hline(100, 72, 24, Ac.h); m.vline(100, 72, 16, Ac.l); m.vline(123, 72, 16, Ac.d); m.hline(100, 87, 24, Ac.d2);
       for (let y = 75; y < 86; y += 2) m.hline(103, y, 11, Ac.d);
